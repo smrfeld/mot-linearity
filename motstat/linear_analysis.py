@@ -57,9 +57,11 @@ class LinStats:
     track_duration_idxs: int
     track_length_pixels: float
 
+    lin_segments_duration_idxs: List[int]
     lin_segments_mean_duration_idxs: float
     lin_segments_std_duration_idxs: float
     
+    lin_segments_length_pixels: List[float]
     lin_segments_mean_length_pixels: float
     lin_segments_std_length_pixels: float
 
@@ -106,8 +108,10 @@ class LinSegs:
             frac_of_points_in_linear_segments=frac_of_points_in_linear_segments,
             track_duration_idxs=track_duration_idxs,
             track_length_pixels=track_length_pixels,
+            lin_segments_duration_idxs=lin_segments_duration_idxs,
             lin_segments_mean_duration_idxs=lin_segments_mean_duration_idxs,
             lin_segments_std_duration_idxs=lin_segments_std_duration_idxs,
+            lin_segments_length_pixels=lin_segments_length_pixels,
             lin_segments_mean_length_pixels=lin_segments_mean_length_pixels,
             lin_segments_std_length_pixels=lin_segments_std_length_pixels
             )

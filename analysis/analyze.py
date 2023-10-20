@@ -7,7 +7,7 @@ import argparse
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mot-dir", type=str, help="MOT17Labels directory", required=True)
+    parser.add_argument("--mot-dir", type=str, help="MOT labels directory, e.g. MOT17Labels or MOT20Labels", required=True)
     parser.add_argument("--command", type=str, help="Command", required=True, choices=["plot-traj", "tol-analysis", "perturb-analysis"])
     parser.add_argument("--file", type=str, help="File to plot", required=False, default="MOT17-09-FRCNN")
     parser.add_argument("--track-ids", type=int, help="Track indexes to plot", required=False, nargs="+", default=[9,10,5])
@@ -24,9 +24,10 @@ if __name__ == "__main__":
         ))
 
     if args.command == "plot-traj":
-
+        assert args.file in file_to_tracks, f"File {args.file} not found in {args.mot_dir}"
         tracks = file_to_tracks[args.file]
         for track_id in args.track_ids:
+            assert track_id in tracks.tracks, f"Track {track_id} not found in {args.file}"
             track = tracks.tracks[track_id]
 
             checker = ms.LinTripletChecker(ms.LinTripletChecker.Options(mode=ms.LinTripletChecker.Options.Mode.TOL, tol=args.tol))
