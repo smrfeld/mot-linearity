@@ -17,11 +17,27 @@ class Box(DataClassDictMixin):
     consider: Optional[bool] = None
 
 
+def length_boxes_center(boxes: List[Box]) -> float:
+    dist_center = 0
+    for i in range(len(boxes)-1):
+        xyxy1 = boxes[i].xyxy
+        xyxy2 = boxes[i+1].xyxy
+
+        center1 = [(xyxy1[0] + xyxy1[2]) / 2, (xyxy1[1] + xyxy1[3]) / 2]
+        center2 = [(xyxy2[0] + xyxy2[2]) / 2, (xyxy2[1] + xyxy2[3]) / 2]
+        dist_center += ((center1[0] - center2[0])**2 + (center1[1] - center2[1])**2)**0.5
+
+    return dist_center
+
+
 @dataclass
 class Track(DataClassDictMixin):
     track_id: int
     boxes: List[Box]
     is_gt: bool
+
+    def length_pixels_center(self) -> float:
+        return length_boxes_center(self.boxes)
 
 
 @dataclass

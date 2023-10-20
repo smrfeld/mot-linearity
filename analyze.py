@@ -16,8 +16,9 @@ tracks = list(file_to_tracks.values())[3]
 track_id,track = list(tracks.tracks.items())[4]
 
 segments = ms.find_linear_segments(track, tol=0.2)
-print(f"Track {track_id} has {len(segments)} linear segments")
-print(segments)
+
+stats = segments.stats()
+stats.report()
 
 # Plot
 fig = go.Figure()
