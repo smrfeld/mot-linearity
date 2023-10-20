@@ -15,10 +15,11 @@ file_to_tracks = ms.load_tracks(ms.DataSpec(
 tracks = list(file_to_tracks.values())[3]
 track_id,track = list(tracks.tracks.items())[4]
 
-segments = ms.find_linear_segments(track, tol=0.2)
+for tol in [0, 0.05, 0.1, 0.2]:
+    segments = ms.find_linear_segments(track, tol=tol)
 
-stats = segments.stats()
-stats.report()
+    stats = segments.stats()
+    stats.report()
 
 # Plot
 fig = go.Figure()
