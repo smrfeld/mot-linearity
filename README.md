@@ -4,4 +4,6 @@ Download the MOT-17 data [https://motchallenge.net/data/MOT17/](https://motchall
 
 ## Follow-on idea
 
-Auto pixel slope variation instead of tolerance
+* Auto pixel slope variation instead of tolerance
+* Plot tolerances vs stats
+* Plot some example videos
