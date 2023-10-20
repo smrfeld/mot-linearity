@@ -28,12 +28,20 @@ class PlotterTrajs:
         )
 
 
+    def add_markers(self, x: List[float], y: List[float], col: str):
+        trace = go.Scatter(
+            x=x, y=y,
+            mode='markers',
+            marker=dict(color=col),
+            showlegend=False
+            )
+        self.fig.add_trace(trace)
+
+
     def add_line(self, x: List[float], y: List[float], col: str):
         trace = go.Scatter(
             x=x, y=y,
-            mode='lines+markers',
-            name='lines+markers',
-            marker=dict(color=col),
+            mode='lines',
             line=dict(color=col, width=2),
             showlegend=False
             )
@@ -51,14 +59,23 @@ class PlotterTrajs:
         self.fig.add_trace(trace)
 
 
-    def add_track(self, track: Track):
+    def add_track(self, track: Track, excl_markers_for_idxs: List[int] = []):
         self.add_box(track.boxes[0], col="gray")
+
         x = [box.xyxy[0] for box in track.boxes]
         y = [box.xyxy[1] for box in track.boxes]
         self.add_line(x, y, col="blue")
+        x_excl = [x[i] for i in range(len(x)) if i not in excl_markers_for_idxs]
+        y_excl = [y[i] for i in range(len(y)) if i not in excl_markers_for_idxs]
+        self.add_markers(x_excl, y_excl, col="blue")
+
         x = [box.xyxy[2] for box in track.boxes]
         y = [box.xyxy[3] for box in track.boxes]
-        self.add_line(x, y, col="blue")        
+        self.add_line(x, y, col="blue")
+        x_excl = [x[i] for i in range(len(x)) if i not in excl_markers_for_idxs]
+        y_excl = [y[i] for i in range(len(y)) if i not in excl_markers_for_idxs]
+        self.add_markers(x_excl, y_excl, col="blue")
+
         self.add_box(track.boxes[-1], col="gray")
 
 
@@ -71,11 +88,11 @@ class PlotterTrajs:
 
                 x = [track.boxes[seg.idx_start_incl].xyxy[i]]
                 y = [track.boxes[seg.idx_start_incl].xyxy[j]]
-                self.add_line(x, y, col="black")
+                self.add_markers(x, y, col="red")
 
                 x = [track.boxes[seg.idx_end_incl].xyxy[i]]
                 y = [track.boxes[seg.idx_end_incl].xyxy[j]]
-                self.add_line(x, y, col="black")
+                self.add_markers(x, y, col="red")
 
 
 class PlotterFrac:

@@ -1,3 +1,5 @@
 MOT17*/
 __pycache__/
 *.egg-info/
+*.png
+*.DS_Store
