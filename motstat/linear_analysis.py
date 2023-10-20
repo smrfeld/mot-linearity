@@ -50,8 +50,8 @@ def find_linear_triplets(track: Track, tol: float) -> List[int]:
         xy_tr_3 = [xyxy3[2], xyxy3[3]]
         t_tr = check_if_triplet_in_line(xy_tr_1, xy_tr_2, xy_tr_3, tol)
 
-        logger.debug("Slopes:", t_bl.m12, t_bl.m23, t_bl.is_linear, t_tr.m12, t_tr.m23, t_tr.is_linear)
-
+        logger.debug(f"Slopes: {t_bl.m12} {t_bl.m23} {t_bl.is_linear} {t_tr.m12} {t_tr.m23} {t_tr.is_linear}")
+        
         if not t_tr.is_linear or not t_bl.is_linear:
             continue
         

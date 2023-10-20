@@ -4,6 +4,8 @@ import glob
 import os
 import json
 from typing import List, Optional, Dict
+from enum import Enum
+
 
 @dataclass
 class Box(DataClassDictMixin):
@@ -69,13 +71,22 @@ def read_file(fname: str, is_gt: bool) -> Tracks:
 
 @dataclass
 class DataSpec(DataClassDictMixin):
-    dir_name: str = "/Users/oernst/Downloads/MOT17Labels"
-    split: str = "train"
-    mode: str = "gt"
+
+    class Split(Enum):
+        TRAIN = "train"
+        TEST = "test"
+
+    class Mode(Enum):
+        GT = "gt"
+        DET = "det"
+
+    mot_dir: str
+    split: Split = Split.TRAIN
+    mode: Mode = Mode.GT
 
 
 def load_tracks(spec: DataSpec) -> Dict[str, Tracks]:
-    fnames = glob.glob(os.path.join(spec.dir_name, spec.split, "*", spec.mode, "%s.txt" % spec.mode))
+    fnames = glob.glob(os.path.join(spec.mot_dir, spec.split.value, "*", spec.mode.value, "%s.txt" % spec.mode.value))
     tracks = {}
     for fname in fnames:
         tracks[os.path.basename(os.path.dirname(os.path.dirname(fname)))] = read_file(fname, spec.mode == "gt")
