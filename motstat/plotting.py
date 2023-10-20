@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import plotly.graph_objects as go
 
 
-class Plotter:
+class PlotterTrajs:
 
 
     def __init__(self, fig: go.Figure):
@@ -76,3 +76,35 @@ class Plotter:
                 x = [track.boxes[seg.idx_end_incl].xyxy[i]]
                 y = [track.boxes[seg.idx_end_incl].xyxy[j]]
                 self.add_line(x, y, col="black")
+
+
+class PlotterFrac:
+
+
+    def __init__(self, fig: go.Figure):
+        self.fig: go.Figure = fig
+        self.default_layout()
+    
+
+    def default_layout(self):
+        self.fig.update_layout(
+            title="Fraction of points in linear segments<br>measured across all GT tracks",
+            xaxis_title="Tolerance between neighboring slopes",
+            yaxis_title="Fraction of points in linear segments",
+            width=800,
+            height=600,
+            font=dict(size=24),
+            yaxis=dict(
+                range=[0,1]
+            )
+        )
+
+
+    def add_tol_to_ave_frac(self, tol_to_ave_frac: Dict[float,float]):
+        self.fig.add_trace(go.Scatter(
+            x=list(tol_to_ave_frac.keys()),
+            y=list(tol_to_ave_frac.values()),
+            mode="lines+markers",
+            marker=dict(size=10),
+            line=dict(width=2),
+            ))

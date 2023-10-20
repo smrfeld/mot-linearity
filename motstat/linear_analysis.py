@@ -1,4 +1,6 @@
 from motstat.data import load_tracks, Tracks, DataSpec, Track, length_boxes_center
+from motstat.linear_triplet import LinTripletChecker, LinTriplet
+
 
 import plotly.graph_objects as go
 from typing import List, Dict, Tuple, Optional
@@ -7,32 +9,7 @@ from loguru import logger
 import numpy as np
 
 
-@dataclass
-class LinTriplet:
-    is_linear: bool
-    m12: Optional[float] = None
-    m23: Optional[float] = None
-
-
-def check_if_triplet_in_line(xy1: List[float], xy2: List[float], xy3: List[float], tol: float) -> LinTriplet:
-    delta_x12 = xy2[0] - xy1[0]
-    delta_y12 = xy2[1] - xy1[1]
-    delta_x23 = xy3[0] - xy2[0]
-    delta_y23 = xy3[1] - xy2[1]
-
-    # Handle 0
-    if delta_x12 == 0:
-        return LinTriplet(delta_x23 == 0)
-    if delta_x23 == 0:
-        return LinTriplet(delta_x12 == 0)
-    
-    m12 = delta_y12 / delta_x12
-    m23 = delta_y23 / delta_x23
-    is_linear = abs(m12 - m23) <= tol
-    return LinTriplet(is_linear, m12, m23)
-
-
-def find_linear_triplets(track: Track, tol: float) -> List[int]:
+def find_linear_triplets(track: Track, checker: LinTripletChecker) -> List[int]:
     
     idx_linear = []
     for i in range(1,len(track.boxes)-1):
@@ -44,12 +21,12 @@ def find_linear_triplets(track: Track, tol: float) -> List[int]:
         xy_bl_1 = [xyxy1[0], xyxy1[1]]
         xy_bl_2 = [xyxy2[0], xyxy2[1]]
         xy_bl_3 = [xyxy3[0], xyxy3[1]]
-        t_bl = check_if_triplet_in_line(xy_bl_1, xy_bl_2, xy_bl_3, tol)
+        t_bl = checker.check_if_triplet_in_line(xy_bl_1, xy_bl_2, xy_bl_3)
 
         xy_tr_1 = [xyxy1[2], xyxy1[3]]
         xy_tr_2 = [xyxy2[2], xyxy2[3]]
         xy_tr_3 = [xyxy3[2], xyxy3[3]]
-        t_tr = check_if_triplet_in_line(xy_tr_1, xy_tr_2, xy_tr_3, tol)
+        t_tr = checker.check_if_triplet_in_line(xy_tr_1, xy_tr_2, xy_tr_3)
 
         # logger.debug(f"Slopes: {t_bl.m12} {t_bl.m23} {t_bl.is_linear} {t_tr.m12} {t_tr.m23} {t_tr.is_linear}")
 
@@ -108,18 +85,18 @@ class LinSegs:
     def stats(self) -> LinStats:        
         no_points_in_linear_segments = len(self.idxs_in_lin_segments)
         no_points_in_track = len(self.track.boxes)
-        frac_of_points_in_linear_segments = no_points_in_linear_segments / no_points_in_track
+        frac_of_points_in_linear_segments = no_points_in_linear_segments / no_points_in_track if no_points_in_track > 0 else 0
 
         track_duration_idxs = self.track.boxes[-1].frame_id - self.track.boxes[0].frame_id + 1
         track_length_pixels = self.track.length_pixels_center()
 
         lin_segments_duration_idxs = [seg.idx_end_incl - seg.idx_start_incl + 1 for seg in self.segments]
-        lin_segments_mean_duration_idxs = np.mean(lin_segments_duration_idxs,dtype=float)
-        lin_segments_std_duration_idxs = np.std(lin_segments_duration_idxs,dtype=float)
+        lin_segments_mean_duration_idxs = np.mean(lin_segments_duration_idxs,dtype=float) if len(lin_segments_duration_idxs) > 0 else 0
+        lin_segments_std_duration_idxs = np.std(lin_segments_duration_idxs,dtype=float) if len(lin_segments_duration_idxs) > 0 else 0
 
         lin_segments_length_pixels = [ length_boxes_center(self.track.boxes[seg.idx_start_incl:seg.idx_end_incl+1]) for seg in self.segments]
-        lin_segments_mean_length_pixels = np.mean(lin_segments_length_pixels,dtype=float)
-        lin_segments_std_length_pixels = np.std(lin_segments_length_pixels,dtype=float)
+        lin_segments_mean_length_pixels = np.mean(lin_segments_length_pixels,dtype=float) if len(lin_segments_length_pixels) > 0 else 0
+        lin_segments_std_length_pixels = np.std(lin_segments_length_pixels,dtype=float) if len(lin_segments_length_pixels) > 0 else 0
 
         return LinStats(
             track_id=self.track.track_id,
@@ -136,8 +113,8 @@ class LinSegs:
             )
 
 
-def find_linear_segments(track: Track, tol: float) -> LinSegs:
-    idxs = find_linear_triplets(track, tol)
+def find_linear_segments(track: Track, checker: LinTripletChecker) -> LinSegs:
+    idxs = find_linear_triplets(track, checker)
 
     segments = []
     no_boxes = len(track.boxes)
