@@ -1,15 +1,17 @@
 import motstat as ms
-from motstat.plotting import PlotterTrajs, PlotterFrac, PlotterLinSegmentsHist
+from motstat.plotting import PlotterTrajs, PlotterFrac, PlotterHist
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import argparse
 from tqdm import tqdm
+import json
+import numpy as np
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--mot-dir", type=str, help="MOT labels directory, e.g. MOT17Labels or MOT20Labels", required=True)
-    parser.add_argument("--command", type=str, help="Command", required=True, choices=["plot-traj", "plot-traj-tog", "hist-analysis", "tol-analysis", "perturb-analysis"])
+    parser.add_argument("--command", type=str, help="Command", required=True, choices=["plot-traj", "plot-traj-tog", "hist-analysis", "tol-analysis", "perturb-analysis", "sim-random-walk"])
     parser.add_argument("--file", type=str, help="File to plot", required=False, default="MOT17-09-FRCNN")
     parser.add_argument("--track-ids", type=int, help="Track indexes to plot", required=False, nargs="+", default=[9,10,5])
     parser.add_argument("--tol", type=float, help="Tolerance", required=False, default=0.1)
@@ -91,7 +93,7 @@ if __name__ == "__main__":
 
     elif args.command == "hist-analysis":
 
-        lin_segments_duration_idxs = []
+        lin_segments_duration_idxs, track_displacements_pixels = [], []
         for fname,tracks in tqdm(file_to_tracks.items(), desc="Measuring linear stats for each file"):
             for track_id,track in tracks.tracks.items():
 
@@ -99,9 +101,10 @@ if __name__ == "__main__":
                 segments = ms.find_linear_segments(track, checker)
                 stats = segments.stats()
                 lin_segments_duration_idxs += stats.lin_segments_duration_idxs
+                track_displacements_pixels += stats.track_displacements_pixels
 
         fig = go.Figure()
-        ph = PlotterLinSegmentsHist(fig)
+        ph = PlotterHist(fig)
         ph.add_lin_segments_hist(lin_segments_duration_idxs)
         fig.update_layout(
             title=f"Linear segments duration<br>(slope difference tol={args.tol})",
@@ -111,6 +114,32 @@ if __name__ == "__main__":
         fname = f"histogram_tol_{args.tol:.2f}.png"
         fig.write_image(fname)
         print(f"Wrote to {fname}")
+
+        fig = go.Figure()
+        ph = PlotterHist(fig)
+        ph.add_lin_segments_hist(track_displacements_pixels)
+        fig.update_layout(
+            xaxis_range=[0,10],
+            xaxis_title="Displacements (pixels)",
+            title=f"Displacements of boxes between neighboring frames",
+            )
+        if args.show:
+            fig.show()
+
+        mean = np.mean(track_displacements_pixels, dtype=float)
+        std = np.std(track_displacements_pixels, dtype=float)
+        print(f"Mean displacement = {mean:.2f} +- {std:.2f} pixels")
+
+        # Write distribution to file
+        disp_to_perc = {}
+        for disp in range(10):
+            disp_min = disp-0.5
+            disp_max = disp+0.5
+            disp_to_perc[disp] = len([ d for d in track_displacements_pixels if disp_min <= d < disp_max ]) / len(track_displacements_pixels)
+        fname = "displacements.json"
+        with open(fname, "w") as f:
+            json.dump(disp_to_perc, f, indent=3)
+            print(f"Wrote to {fname}")
 
     elif args.command == "tol-analysis":
 

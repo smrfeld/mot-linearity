@@ -56,6 +56,7 @@ class LinStats:
     
     track_duration_idxs: int
     track_length_pixels: float
+    track_displacements_pixels: List[float]
 
     lin_segments_duration_idxs: List[int]
     lin_segments_mean_duration_idxs: float
@@ -89,6 +90,7 @@ class LinSegs:
         no_points_in_track = len(self.track.boxes)
         frac_of_points_in_linear_segments = no_points_in_linear_segments / no_points_in_track if no_points_in_track > 0 else 0
 
+        track_displacements_pixels = [ length_boxes_center([self.track.boxes[i], self.track.boxes[i+1]]) for i in range(len(self.track.boxes)-1) ]
         track_duration_idxs = self.track.boxes[-1].frame_id - self.track.boxes[0].frame_id + 1
         track_length_pixels = self.track.length_pixels_center()
 
@@ -106,6 +108,7 @@ class LinSegs:
             no_points_in_lin_segments=no_points_in_linear_segments,
             no_points_in_track=no_points_in_track,
             frac_of_points_in_linear_segments=frac_of_points_in_linear_segments,
+            track_displacements_pixels=track_displacements_pixels,
             track_duration_idxs=track_duration_idxs,
             track_length_pixels=track_length_pixels,
             lin_segments_duration_idxs=lin_segments_duration_idxs,

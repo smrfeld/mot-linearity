@@ -96,7 +96,7 @@ class PlotterTrajs:
 
 
 
-class PlotterLinSegmentsHist:
+class PlotterHist:
 
 
     def __init__(self, fig: go.Figure):
