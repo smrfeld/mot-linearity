@@ -1,42 +1,16 @@
-from motstat.data import load_tracks, Tracks, DataSpec, Track, length_boxes_center
-from motstat.linear_triplet import LinTripletChecker, LinTriplet
+from motstat.data import Track, length_boxes_center
+from motstat.linear_triplet import LinTripletChecker
 
 
-import plotly.graph_objects as go
-from typing import List, Dict, Tuple, Optional
+from typing import List
 from dataclasses import dataclass
 from loguru import logger
 import numpy as np
 
 
 def find_linear_triplets(track: Track, checker: LinTripletChecker) -> List[int]:
-    
-    idx_linear = []
-    for i in range(1,len(track.boxes)-1):
-        xyxy1 = track.boxes[i-1].xyxy
-        xyxy2 = track.boxes[i].xyxy
-        xyxy3 = track.boxes[i+1].xyxy
-
-        # Check if in a line
-        xy_bl_1 = [xyxy1[0], xyxy1[1]]
-        xy_bl_2 = [xyxy2[0], xyxy2[1]]
-        xy_bl_3 = [xyxy3[0], xyxy3[1]]
-        t_bl = checker.check_if_triplet_in_line(xy_bl_1, xy_bl_2, xy_bl_3)
-
-        xy_tr_1 = [xyxy1[2], xyxy1[3]]
-        xy_tr_2 = [xyxy2[2], xyxy2[3]]
-        xy_tr_3 = [xyxy3[2], xyxy3[3]]
-        t_tr = checker.check_if_triplet_in_line(xy_tr_1, xy_tr_2, xy_tr_3)
-
-        # logger.debug(f"Slopes: {t_bl.m12} {t_bl.m23} {t_bl.is_linear} {t_tr.m12} {t_tr.m23} {t_tr.is_linear}")
-
-        if not t_tr.is_linear or not t_bl.is_linear:
-            continue
-        
-        # In a line
-        idx_linear.append(i)
-
-    return idx_linear
+    xyxys = [box.xyxy for box in track.boxes]
+    return checker.find_linear_triplets_xyxy(xyxys)
 
 
 @dataclass

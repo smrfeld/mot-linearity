@@ -7,6 +7,7 @@ from typing import List, Dict, Tuple, Optional
 import numpy as np
 from tqdm import tqdm
 
+
 def measure_ave_frac_perturb(file_to_tracks: Dict[str,Tracks], perturb_mag: float) -> float:
     checker = LinTripletChecker(LinTripletChecker.Options(mode=LinTripletChecker.Options.Mode.TOL, perturb_mag=perturb_mag))
 
@@ -18,6 +19,7 @@ def measure_ave_frac_perturb(file_to_tracks: Dict[str,Tracks], perturb_mag: floa
             frac_list.append(stats.frac_of_points_in_linear_segments)
 
     return np.mean(frac_list, dtype=float)
+
 
 def measure_tol_to_ave_frac(file_to_tracks: Dict[str,Tracks]) -> Dict[float,float]:
     tol_to_frac_list = {}
@@ -31,6 +33,7 @@ def measure_tol_to_ave_frac(file_to_tracks: Dict[str,Tracks]) -> Dict[float,floa
     for tol,frac_list in tol_to_frac_list.items():
         tol_to_ave_frac[tol] = np.mean(frac_list, dtype=float) if len(frac_list) > 0 else 0.0
     return tol_to_ave_frac
+
 
 def measure_tol_to_frac_for_track(track: Track) -> Dict[float,float]:
     checker = LinTripletChecker(LinTripletChecker.Options(mode=LinTripletChecker.Options.Mode.TOL))

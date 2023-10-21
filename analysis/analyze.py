@@ -145,6 +145,30 @@ if __name__ == "__main__":
             json.dump(disp_to_perc, f, indent=3)
             print(f"Wrote to {fname}")
 
+    elif args.command == "sim-random-walk":
+
+        # Load displacements
+        with open("MOT17_displacements.json", "r") as f:
+            disp_to_perc = { int(k): float(v) for k,v in json.load(f).items() }
+
+        # Simulate random walk
+        trajs = {}
+        for itraj in range(0,100):
+
+            pts = [[0,0]]
+            trajs[itraj] = pts
+            for j in range(0,100):
+                # Sample displacement
+                disp_x = np.random.choice(list(disp_to_perc.keys()), p=list(disp_to_perc.values()))
+                disp_y = np.random.choice(list(disp_to_perc.keys()), p=list(disp_to_perc.values()))
+                
+                # Add to points
+                pts.append([pts[-1][0]+int(disp_x), pts[-1][1]+int(disp_y)])
+        
+        with open("random_walk.json", "w") as f:
+            json.dump(trajs, f, indent=None)
+            print(f"Wrote to random_walk.json")
+
     elif args.command == "tol-analysis":
 
         tol_to_ave_frac = ms.measure_tol_to_ave_frac(file_to_tracks)

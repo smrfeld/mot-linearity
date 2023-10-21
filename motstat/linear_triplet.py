@@ -98,3 +98,50 @@ class LinTripletChecker:
         return LinTriplet(is_linear, m12, m23)
 
 
+    def find_linear_triplets(self, pts: List[List[float]]) -> List[int]:
+        
+        idx_linear = []
+        for i in range(1,len(pts)-1):
+            # Check if in a line
+            assert len(pts[i-1]) == 2
+            assert len(pts[i]) == 2
+            assert len(pts[i+1]) == 2
+            t = self.check_if_triplet_in_line(pts[i-1], pts[i], pts[i+1])
+
+            if not t.is_linear:
+                continue
+            
+            # In a line
+            idx_linear.append(i)
+
+        return idx_linear
+
+
+    def find_linear_triplets_xyxy(self, xyxys: List[List[float]]) -> List[int]:
+
+        idx_linear = []
+        for i in range(1,len(xyxys)-1):
+            xyxy1 = xyxys[i-1]
+            xyxy2 = xyxys[i]
+            xyxy3 = xyxys[i+1]
+
+            # Check if in a line
+            xy_bl_1 = [xyxy1[0], xyxy1[1]]
+            xy_bl_2 = [xyxy2[0], xyxy2[1]]
+            xy_bl_3 = [xyxy3[0], xyxy3[1]]
+            t_bl = self.check_if_triplet_in_line(xy_bl_1, xy_bl_2, xy_bl_3)
+
+            xy_tr_1 = [xyxy1[2], xyxy1[3]]
+            xy_tr_2 = [xyxy2[2], xyxy2[3]]
+            xy_tr_3 = [xyxy3[2], xyxy3[3]]
+            t_tr = self.check_if_triplet_in_line(xy_tr_1, xy_tr_2, xy_tr_3)
+
+            # logger.debug(f"Slopes: {t_bl.m12} {t_bl.m23} {t_bl.is_linear} {t_tr.m12} {t_tr.m23} {t_tr.is_linear}")
+
+            if not t_tr.is_linear or not t_bl.is_linear:
+                continue
+            
+            # In a line
+            idx_linear.append(i)
+
+        return idx_linear
