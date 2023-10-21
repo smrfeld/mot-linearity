@@ -95,6 +95,35 @@ class PlotterTrajs:
                 self.add_markers(x, y, color="red", row=row, col=col)
 
 
+
+class PlotterLinSegmentsHist:
+
+
+    def __init__(self, fig: go.Figure):
+        self.fig: go.Figure = fig
+        self.default_layout()
+    
+
+    def default_layout(self):
+        self.fig.update_layout(
+            width=800,
+            height=600,
+            font=dict(size=24),
+            xaxis=dict(
+                title_text='Linear segments duration (number of frames)',
+                range=[0,10],
+            ),
+            yaxis=dict(
+                title_text='Percentage',
+            ),
+        )
+
+
+    def add_lin_segments_hist(self, lin_segments_duration_idxs: List[int]):
+        trace = go.Histogram(x=lin_segments_duration_idxs, xbins=dict(size=1), histnorm='percent')
+        self.fig.add_trace(trace)
+
+
 class PlotterFrac:
 
 
