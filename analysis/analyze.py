@@ -135,7 +135,11 @@ if __name__ == "__main__":
         for disp in range(10):
             disp_min = disp-0.5
             disp_max = disp+0.5
-            disp_to_perc[disp] = len([ d for d in track_displacements_pixels if disp_min <= d < disp_max ]) / len(track_displacements_pixels)
+            disp_to_perc[disp] = len([ d for d in track_displacements_pixels if disp_min <= d < disp_max ])
+        tot = sum(disp_to_perc.values())
+        for disp in disp_to_perc:
+            disp_to_perc[disp] /= tot
+
         fname = "displacements.json"
         with open(fname, "w") as f:
             json.dump(disp_to_perc, f, indent=3)
