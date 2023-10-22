@@ -121,12 +121,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--mot", type=str, help="MOT", required=True, choices=[ms.DataSpec.Mot.MOT17.value, ms.DataSpec.Mot.MOT20.value])
-    parser.add_argument("--command", type=str, help="Command", required=True, choices=["plot-traj", "plot-traj-tog", "lin-analysis", "random-walk-sim", "random-walk-analysis", "plot-traj-tog-random-walk"])
+    parser.add_argument("--command", type=str, help="Command to run. (1) plot-traj - Plot some trajectories from the dataset and their linear segments. (2) plot-traj-tog - Plot some trajectories from the dataset and their linear segments side-by-side. (3) lin-analysis - Run the linear analysis for the dataset. (4) random-walk-sim - simulate a random walk. (5) random-walk-analysis - Analyze the random walk. (6) plot-traj-tog-random-walk - Plot the trajectories and linear segments from the random walks.", required=True, choices=["plot-traj", "plot-traj-tog", "lin-analysis", "random-walk-sim", "random-walk-analysis", "plot-traj-tog-random-walk"])
     parser.add_argument("--file", type=str, help="File to plot", required=False, default="MOT17-09-FRCNN")
     parser.add_argument("--track-ids", type=int, help="Track indexes to plot", required=False, nargs="+", default=[9,10,5])
     parser.add_argument("--tol", type=float, help="Tolerance", required=False, default=0.1)
     parser.add_argument("--show", action="store_true", help="Show plots")
-    parser.add_argument("--disp-json", type=str, help="File name to write displacements to", required=False, default="displacements.json")
     parser.add_argument("--random-walk-json", type=str, help="File name to write random walk to", required=False, default="random_walk.json")
     parser.add_argument("--figures-dir", type=str, help="Directory to write figures to", required=False, default="figures")
     args = parser.parse_args()
