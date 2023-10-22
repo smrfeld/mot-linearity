@@ -17,6 +17,9 @@ def write_fig(fig: go.Figure, bname: str, figures_dir: str):
 
 
 def linear_analysis(file_to_tracks: ms.FileToTracks, tol: float, show: bool, figures_dir: str, figures_tag: str):
+    print("---")
+    print(figures_tag)
+    print("---")
 
     # Linear segments duration analysis
     lin_segments_duration_idxs = ms.measure_lin_segments_duration_idxs_all_files(file_to_tracks, tol=tol)

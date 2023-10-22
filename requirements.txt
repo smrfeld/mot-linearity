@@ -1,4 +1,6 @@
 loguru==0.7.2
 mashumaro==3.10
+numpy==1.26.1
 plotly==5.17.0
 setuptools==68.0.0
+tqdm==4.66.1
