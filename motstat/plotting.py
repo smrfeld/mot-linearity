@@ -162,7 +162,7 @@ class PlotterFrac:
             title="Fraction of points in linear segments<br>measured across all GT tracks",
             xaxis_title="Tolerance between neighboring slopes",
             yaxis_title="Fraction of points in linear segments",
-            width=800,
+            width=1000,
             height=600,
             font=dict(size=24),
             yaxis=dict(

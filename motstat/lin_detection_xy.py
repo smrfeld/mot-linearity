@@ -7,7 +7,7 @@ from typing import List
 
 
 def find_linear_triplets(track: TrackXy, checker: LinTripletChecker) -> List[int]:
-    xys = [ [ float(z) for z in pt ] for pt in track.entries]
+    xys = [ [ float(z) for z in entry.data ] for entry in track.entries]
     return checker.find_linear_triplets(xys)
 
 

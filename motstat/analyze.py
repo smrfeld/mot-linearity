@@ -5,18 +5,29 @@ from motstat.lin_detection import find_linear_segments, LinTripletChecker
 from typing import List, Dict, Tuple, Union
 import numpy as np
 from tqdm import tqdm
+from dataclasses import dataclass
 
 
-def measure_ave_frac_perturb_all_files(file_to_tracks: FileToTracks, perturb_mag: float) -> Tuple[float,float,List[float]]:
+@dataclass
+class AveFracPerturb:
+    mean: float
+    std: float
+    frac_list: List[float]
+
+    @classmethod
+    def from_list(cls, frac_list: List[float]):
+        return cls(np.mean(frac_list, dtype=float), np.std(frac_list, dtype=float), frac_list)
+
+
+def measure_ave_frac_perturb_all_files(file_to_tracks: FileToTracks, perturb_mag: float) -> AveFracPerturb:
     frac_list = []
     for fname,tracks in tqdm(file_to_tracks.items(), desc="Measuring linear stats for each file"):
-        _,_,frac_list_for_file = measure_ave_frac_perturb(tracks, perturb_mag)
-        frac_list += frac_list_for_file
+        r = measure_ave_frac_perturb(tracks, perturb_mag)
+        frac_list += r.frac_list
+    return AveFracPerturb.from_list(frac_list)
 
-    return np.mean(frac_list, dtype=float), np.std(frac_list, dtype=float), frac_list
 
-
-def measure_ave_frac_perturb(tracks: Tracks, perturb_mag: float) -> Tuple[float,float, List[float]]:
+def measure_ave_frac_perturb(tracks: Tracks, perturb_mag: float) -> AveFracPerturb:
     checker = LinTripletChecker(LinTripletChecker.Options(mode=LinTripletChecker.Options.Mode.TOL, perturb_mag=perturb_mag))
 
     frac_list = []
@@ -25,33 +36,43 @@ def measure_ave_frac_perturb(tracks: Tracks, perturb_mag: float) -> Tuple[float,
         stats = segments.stats()
         frac_list.append(stats.frac_of_points_in_linear_segments)
 
-    return np.mean(frac_list, dtype=float), np.std(frac_list, dtype=float), frac_list
+    return AveFracPerturb.from_list(frac_list)
 
 
-def measure_tol_to_ave_frac_all_files(file_to_tracks: FileToTracks) -> Tuple[Dict[float,float],Dict[float,List[float]]]:
+@dataclass
+class TolToFrac:
+    tol_to_frac_ave_std: Dict[float,Tuple[float,float]]
+    tol_to_frac_list: Dict[float,List[float]]
+
+    @classmethod
+    def from_dict(cls, tol_to_frac_list: Dict[float,List[float]]):
+        tol_to_frac_ave_std = {}
+        for tol,frac_list in tol_to_frac_list.items():
+            if len(frac_list) == 0:
+                tol_to_frac_ave_std[tol] = (0,0)
+            else:
+                tol_to_frac_ave_std[tol] = (np.mean(frac_list, dtype=float), np.std(frac_list, dtype=float))
+        return cls(tol_to_frac_ave_std, tol_to_frac_list)
+
+
+def measure_tol_to_ave_frac_all_files(file_to_tracks: FileToTracks) -> TolToFrac:
     tol_to_frac_list: Dict[float,List[float]] = {}
     for fname,tracks in tqdm(file_to_tracks.items(), desc="Measuring linear stats for each file"):
-        _, tol_to_frac = measure_tol_to_ave_frac(tracks)
-        for tol,fracs in tol_to_frac.items():
+        tf = measure_tol_to_ave_frac(tracks)
+        for tol,fracs in tf.tol_to_frac_list.items():
             tol_to_frac_list.setdefault(tol, []).extend(fracs)
 
-    tol_to_ave_frac = {}
-    for tol,frac_list in tol_to_frac_list.items():
-        tol_to_ave_frac[tol] = np.mean(frac_list, dtype=float) if len(frac_list) > 0 else 0.0
-    return tol_to_ave_frac, tol_to_frac_list
+    return TolToFrac.from_dict(tol_to_frac_list)
 
 
-def measure_tol_to_ave_frac(tracks: Tracks) -> Tuple[Dict[float,float],Dict[float,List[float]]]:
+def measure_tol_to_ave_frac(tracks: Tracks) -> TolToFrac:
     tol_to_frac_list: Dict[float,List[float]] = {}
     for track_id,track in tracks.tracks.items():
         tol_to_frac = measure_tol_to_frac_for_track(track)
         for tol,frac in tol_to_frac.items():
             tol_to_frac_list.setdefault(tol, []).append(frac)
 
-    tol_to_ave_frac = {}
-    for tol,frac_list in tol_to_frac_list.items():
-        tol_to_ave_frac[tol] = np.mean(frac_list, dtype=float) if len(frac_list) > 0 else 0.0
-    return tol_to_ave_frac, tol_to_frac_list
+    return TolToFrac.from_dict(tol_to_frac_list)
 
 
 def measure_tol_to_frac_for_track(track: Track) -> Dict[float,float]:

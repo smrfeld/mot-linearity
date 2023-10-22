@@ -28,39 +28,42 @@ def linear_analysis(file_to_tracks: ms.FileToTracks, tol: float, show: bool, fig
     ph = PlotterHist(fig)
     ph.add_hist(lin_segments_duration_idxs)
     fig.update_layout(
-        title=f"Linear segments duration<br>(slope difference tol={tol})",
+        title=f"Linear segments duration ({figures_tag})<br>(slope difference tol={tol})",
         )
     if show:
         fig.show()
-    write_fig(fig, f"histogram_tol_{tol:.2f}_{figures_tag}.png", figures_dir)
+    write_fig(fig, f"histogram_tol_{tol:.2f}_{figures_tag.replace(' ','_')}.png", figures_dir)
 
     # Tolerance analysis
     print("---")
-    tol_to_ave_frac = ms.measure_tol_to_ave_frac_all_files(file_to_tracks)[0]
+    tol_to_frac_ave_std = ms.measure_tol_to_ave_frac_all_files(file_to_tracks).tol_to_frac_ave_std
     print("Average fraction of points in linear segments by tolerance:")
-    for tol,ave_frac in tol_to_ave_frac.items():
-        print(f"\ttol={tol:.2f}, ave_frac={ave_frac:.2f}")
+    for tol,(ave_frac,std_frac) in tol_to_frac_ave_std.items():
+        print(f"\ttol={tol:.2f}, ave_frac={ave_frac:.2f} +- {std_frac:.2f}")
 
     fig = go.Figure()
     pf = PlotterFrac(fig)
-    pf.add_tol_to_ave_frac(tol_to_ave_frac)
+    pf.add_tol_to_ave_frac({ tol: ave_frac for tol,(ave_frac,std_frac) in tol_to_frac_ave_std.items() })
     if show:
         fig.show()
-    write_fig(fig, f"tol_analysis_{figures_tag}.png", figures_dir)
+    fig.update_layout(
+        title=f"Fraction of points in linear segments ({figures_tag})<br>measured across all GT tracks",
+        )
+    write_fig(fig, f"tol_analysis_{figures_tag.replace(' ','_')}.png", figures_dir)
 
     # Perturb analysis
     print("---")
     perturb_mag = 0.5
-    frac_perturb_ave, frac_perturb_std, _ = ms.measure_ave_frac_perturb_all_files(file_to_tracks, perturb_mag)
-    print(f"Ave fraction of linear points = {frac_perturb_ave:.2f} +- {frac_perturb_std:.2f} found by perturbing with magnitude {perturb_mag}")
+    perturb = ms.measure_ave_frac_perturb_all_files(file_to_tracks, perturb_mag)
+    print(f"Ave fraction of linear points = {perturb.mean:.2f} +- {perturb.std:.2f} found by perturbing with magnitude {perturb_mag}")
 
 
-def plot_traj_tog(track_ids: List[int], tracks: ms.Tracks):
+def plot_traj_tog(track_ids: List[int], tracks: ms.Tracks, tol: float, src_str: str, show: bool, figures_dir: str):
     for track_id in track_ids:
-        assert track_id in tracks.tracks, f"Track {track_id} not found in {args.file}"
+        assert track_id in tracks.tracks, f"Track {track_id} not found"
         track = tracks.tracks[track_id]
 
-        checker = ms.LinTripletChecker(ms.LinTripletChecker.Options(mode=ms.LinTripletChecker.Options.Mode.TOL, tol=args.tol))
+        checker = ms.LinTripletChecker(ms.LinTripletChecker.Options(mode=ms.LinTripletChecker.Options.Mode.TOL, tol=tol))
         segments = ms.find_linear_segments(track, checker)
 
         fig = make_subplots(rows=1, cols=2)
@@ -72,20 +75,20 @@ def plot_traj_tog(track_ids: List[int], tracks: ms.Tracks):
         pt.add_lin_segments(segments, track, row=1, col=2)
 
         fig.update_layout(
-            title=f"Track {track_id} from {args.file} (slope difference tol={args.tol})",
+            title=f"Track {track_id} from {src_str} (slope difference tol={tol})",
             width=1600,
             )
 
-        if args.show:
+        if show:
             fig.show()
-        write_fig(fig, f"{args.file}_{track_id}_tog_tol_{args.tol:.2f}.png", args.figures_dir)
+        write_fig(fig, f"{src_str.replace(' ','_')}_{track_id}_tog_tol_{tol:.2f}.png", figures_dir)
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--mot", type=str, help="MOT", required=True, choices=[ms.DataSpec.Mot.MOT17.value, ms.DataSpec.Mot.MOT20.value])
-    parser.add_argument("--command", type=str, help="Command", required=True, choices=["plot-traj", "plot-traj-tog", "lin-analysis", "random-walk-sim", "random-walk-analysis"])
+    parser.add_argument("--command", type=str, help="Command", required=True, choices=["plot-traj", "plot-traj-tog", "lin-analysis", "random-walk-sim", "random-walk-analysis", "plot-traj-tog-random-walk"])
     parser.add_argument("--file", type=str, help="File to plot", required=False, default="MOT17-09-FRCNN")
     parser.add_argument("--track-ids", type=int, help="Track indexes to plot", required=False, nargs="+", default=[9,10,5])
     parser.add_argument("--tol", type=float, help="Tolerance", required=False, default=0.1)
@@ -107,29 +110,16 @@ if __name__ == "__main__":
 
         assert args.file in mot_file_to_tracks, f"File {args.file} not found in {args.mot_dir}"
         tracks = mot_file_to_tracks[args.file]
-        for track_id in args.track_ids:
-            assert track_id in tracks.tracks, f"Track {track_id} not found in {args.file}"
-            track = tracks.tracks[track_id]
+        plot_traj_tog(track_ids=args.track_ids, tracks=tracks, tol=args.tol, src_str=args.file, show=args.show, figures_dir=args.figures_dir)
 
-            checker = ms.LinTripletChecker(ms.LinTripletChecker.Options(mode=ms.LinTripletChecker.Options.Mode.TOL, tol=args.tol))
-            segments = ms.find_linear_segments(track, checker)
+    elif args.command == "plot-traj-tog-random-walk":
 
-            fig = make_subplots(rows=1, cols=2)
-            pt = PlotterTrajs(fig)
-            pt.add_track(track, row=1, col=1)
+        assert os.path.exists(args.random_walk_json), f"File {args.random_walk_json} not found - run random-walk-sim first"
+        with open(args.random_walk_json, "r") as f:
+            tracks = ms.TracksXy.from_dict(json.load(f))
+            print(f"Loaded {len(tracks.tracks)} trajs from {args.random_walk_json}")
 
-            pt = PlotterTrajs(fig)
-            pt.add_track(track, excl_markers_for_idxs=segments.idxs_in_lin_segments, row=1, col=2)
-            pt.add_lin_segments(segments, track, row=1, col=2)
-
-            fig.update_layout(
-                title=f"Track {track_id} from {args.file} (slope difference tol={args.tol})",
-                width=1600,
-                )
-
-            if args.show:
-                fig.show()
-            write_fig(fig, f"{args.file}_{track_id}_tog_tol_{args.tol:.2f}.png", args.figures_dir)
+        plot_traj_tog(track_ids=[0,1,2,3], tracks=tracks, tol=args.tol, src_str="random walk", show=args.show, figures_dir=args.figures_dir)
 
     elif args.command == "plot-traj":
 
@@ -199,10 +189,10 @@ if __name__ == "__main__":
             tracks = ms.TracksXy.from_dict(json.load(f))
             print(f"Loaded {len(tracks.tracks)} trajs from {args.random_walk_json}")
 
-        linear_analysis({ "random_walk": tracks }, args.tol, args.show, args.figures_dir, args.mot)
+        linear_analysis({ "random_walk": tracks }, tol=args.tol, show=args.show, figures_dir=args.figures_dir, figures_tag="Random Walk")
 
     elif args.command == "lin-analysis":
-        linear_analysis(mot_file_to_tracks, args.tol, args.show, args.figures_dir, args.mot)
+        linear_analysis(mot_file_to_tracks, tol=args.tol, show=args.show, figures_dir=args.figures_dir, figures_tag=args.mot)
 
     else:
         raise NotImplementedError(f"Command {args.command} not implemented")

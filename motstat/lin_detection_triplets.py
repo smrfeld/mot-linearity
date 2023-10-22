@@ -56,6 +56,10 @@ class LinTripletChecker:
 
 
     def _check_if_triplet_in_line_perturb(self, xy1: List[float], xy2: List[float], xy3: List[float]) -> LinTriplet:
+        # Check any points are same point => not linear
+        if xy1 == xy2 or xy2 == xy3:
+            return LinTriplet(False)
+
         delta_x12 = xy2[0] - xy1[0]
         delta_y12 = xy2[1] - xy1[1]
         delta_x23 = xy3[0] - xy2[0]
@@ -87,12 +91,16 @@ class LinTripletChecker:
 
 
     def _check_if_triplet_in_line_tol(self, xy1: List[float], xy2: List[float], xy3: List[float]) -> LinTriplet:
+        # Check any points are same point => not linear
+        if xy1 == xy2 or xy2 == xy3:
+            return LinTriplet(False)
+
         delta_x12 = xy2[0] - xy1[0]
         delta_y12 = xy2[1] - xy1[1]
         delta_x23 = xy3[0] - xy2[0]
         delta_y23 = xy3[1] - xy2[1]
 
-        # Handle 0
+        # Handle 0 displacement in x
         if delta_x12 == 0:
             return LinTriplet(delta_x23 == 0)
         if delta_x23 == 0:
