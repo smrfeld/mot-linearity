@@ -4,7 +4,7 @@ How linearly do people walk? This repo. analyses the MOT-17 and MOT-20 datasets 
 
 ## Setup
 
-Install the `motstat` helper package
+Install the `motlinearity` helper package
 
 ```bash
 pip install -r requirements.txt
