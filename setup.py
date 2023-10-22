@@ -4,13 +4,13 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="motstat",
+    name="motlinearity",
     version="0.1.0",
     author="Oliver K. Ernst",
     description="Analyze linear statistics of MOT datasets",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/smrfeld/motstat",
+    url="https://github.com/smrfeld/mot-linearity",
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

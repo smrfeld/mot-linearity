@@ -1,5 +1,5 @@
-from motstat.data import Track, Tracks, FileToTracks
-from motstat.lin_detection import find_linear_segments, LinTripletChecker
+from motlinearity.data import Track, Tracks, FileToTracks
+from motlinearity.lin_detection import find_linear_segments, LinTripletChecker
 
 
 from typing import List, Dict, Tuple, Union

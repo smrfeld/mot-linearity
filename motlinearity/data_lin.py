@@ -1,4 +1,4 @@
-from motstat.lin_detection_triplets import LinSeg
+from motlinearity.lin_detection_triplets import LinSeg
 
 
 from typing import List

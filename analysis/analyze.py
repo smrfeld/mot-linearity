@@ -1,5 +1,5 @@
-import motstat as ms
-from motstat.plotting import PlotterTrajs, PlotterFrac, PlotterHist
+import motlinearity as ms
+from motlinearity.plotting import PlotterTrajs, PlotterFrac, PlotterHist
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import argparse

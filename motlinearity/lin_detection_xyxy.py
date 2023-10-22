@@ -1,6 +1,6 @@
-from motstat.data import TrackXyxy
-from motstat.lin_detection_triplets import LinTripletChecker
-from motstat.data_lin import LinSegs
+from motlinearity.data import TrackXyxy
+from motlinearity.lin_detection_triplets import LinTripletChecker
+from motlinearity.data_lin import LinSegs
 
 
 from typing import List

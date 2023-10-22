@@ -1,4 +1,4 @@
-from motstat.data import DispProb, TracksXy, TrackXy, Entry
+from motlinearity.data import DispProb, TracksXy, TrackXy, Entry
 
 
 import numpy as np

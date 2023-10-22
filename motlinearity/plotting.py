@@ -1,5 +1,5 @@
-from motstat.data import TrackXyxy, Entry, Track, TrackXy
-from motstat.data_lin import LinSegs
+from motlinearity.data import TrackXyxy, Entry, Track, TrackXy
+from motlinearity.data_lin import LinSegs
 
 from typing import List, Dict, Optional, Union, Tuple
 import plotly.graph_objects as go
