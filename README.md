@@ -2,6 +2,8 @@
 
 How linearly do people walk? This repo. analyses the MOT-17 and MOT-20 datasets to find out if people's motions are piecewise linear.
 
+![](readme_figs/MOT17-09-FRCNN_9_tog_tol_0.10.png)
+
 ## Setup
 
 Install the `motlinearity` helper package
