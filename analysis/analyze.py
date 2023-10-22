@@ -61,7 +61,7 @@ def linear_analysis(file_to_tracks: ms.FileToTracks, tol: float, show: bool, fig
     print(f"Ave fraction of linear points = {perturb.mean:.2f} +- {perturb.std:.2f} found by perturbing with magnitude {perturb_mag}")
 
 
-def plot_traj_tog(track_ids: List[int], tracks: ms.Tracks, tol: float, src_str: str, show: bool, figures_dir: str):
+def plot_tracks_tog(track_ids: List[int], tracks: ms.Tracks, tol: float, src_str: str, show: bool, figures_dir: str):
     for track_id in track_ids:
         assert track_id in tracks.tracks, f"Track {track_id} not found"
         track = tracks.tracks[track_id]
@@ -85,6 +85,36 @@ def plot_traj_tog(track_ids: List[int], tracks: ms.Tracks, tol: float, src_str: 
         if show:
             fig.show()
         write_fig(fig, f"{src_str.replace(' ','_')}_{track_id}_tog_tol_{tol:.2f}.png", figures_dir)
+
+
+def plot_tracks(track_ids: List[int], src_str: str, tol: float, figures_dir: str, show: bool):
+    for track_id in track_ids:
+        assert track_id in tracks.tracks, f"Track {track_id} not found"
+        track = tracks.tracks[track_id]
+
+        checker = ms.LinTripletChecker(ms.LinTripletChecker.Options(mode=ms.LinTripletChecker.Options.Mode.TOL, tol=tol))
+        segments = ms.find_linear_segments(track, checker)
+
+        fig = go.Figure()
+        pt = PlotterTrajs(fig)
+        pt.add_track(track)
+        fig.update_layout(
+            title=f"Track {track_id} from {src_str}"
+            )
+        if show:
+            fig.show()
+        write_fig(fig, f"{src_str.replace(' ','_')}_{track_id}.png", figures_dir)
+
+        fig = go.Figure()
+        pt = PlotterTrajs(fig)
+        pt.add_track(track, excl_markers_for_idxs=segments.idxs_in_lin_segments)
+        pt.add_lin_segments(segments, track)
+        fig.update_layout(
+            title=f"Track {track_id} from {src_str}<br>including linear segments (red, slope difference tol={tol})"
+            )
+        if show:
+            fig.show()
+        write_fig(fig, f"{src_str.replace(' ','_')}_{track_id}_incl_lin_segments_tol_{tol:.2f}.png", figures_dir)
 
 
 if __name__ == "__main__":
@@ -113,7 +143,7 @@ if __name__ == "__main__":
 
         assert args.file in mot_file_to_tracks, f"File {args.file} not found in {args.mot_dir}"
         tracks = mot_file_to_tracks[args.file]
-        plot_traj_tog(track_ids=args.track_ids, tracks=tracks, tol=args.tol, src_str=args.file, show=args.show, figures_dir=args.figures_dir)
+        plot_tracks_tog(track_ids=args.track_ids, tracks=tracks, tol=args.tol, src_str=args.file, show=args.show, figures_dir=args.figures_dir)
 
     elif args.command == "plot-traj-tog-random-walk":
 
@@ -122,39 +152,13 @@ if __name__ == "__main__":
             tracks = ms.TracksXy.from_dict(json.load(f))
             print(f"Loaded {len(tracks.tracks)} trajs from {args.random_walk_json}")
 
-        plot_traj_tog(track_ids=[0,1,2,3], tracks=tracks, tol=args.tol, src_str="random walk", show=args.show, figures_dir=args.figures_dir)
+        plot_tracks_tog(track_ids=[0,1,2,3], tracks=tracks, tol=args.tol, src_str="random walk", show=args.show, figures_dir=args.figures_dir)
 
     elif args.command == "plot-traj":
 
         assert args.file in mot_file_to_tracks, f"File {args.file} not found in {args.mot_dir}"
         tracks = mot_file_to_tracks[args.file]
-        for track_id in args.track_ids:
-            assert track_id in tracks.tracks, f"Track {track_id} not found in {args.file}"
-            track = tracks.tracks[track_id]
-
-            checker = ms.LinTripletChecker(ms.LinTripletChecker.Options(mode=ms.LinTripletChecker.Options.Mode.TOL, tol=args.tol))
-            segments = ms.find_linear_segments(track, checker)
-
-            fig = go.Figure()
-            pt = PlotterTrajs(fig)
-            pt.add_track(track)
-            fig.update_layout(
-                title=f"Track {track_id} from {args.file}"
-                )
-            if args.show:
-                fig.show()
-            write_fig(fig, f"{args.file}_{track_id}.png", args.figures_dir)
-
-            fig = go.Figure()
-            pt = PlotterTrajs(fig)
-            pt.add_track(track, excl_markers_for_idxs=segments.idxs_in_lin_segments)
-            pt.add_lin_segments(segments, track)
-            fig.update_layout(
-                title=f"Track {track_id} from {args.file}<br>including linear segments (red, slope difference tol={args.tol})"
-                )
-            if args.show:
-                fig.show()
-            write_fig(fig, f"{args.file}_{track_id}_incl_lin_segments_tol_{args.tol:.2f}.png", args.figures_dir)
+        plot_tracks(track_ids=args.track_ids, src_str=args.file, tol=args.tol, figures_dir=args.figures_dir, show=args.show)
 
     elif args.command == "random-walk-sim":
         disps = ms.measure_bbox_coord_displacements(mot_file_to_tracks)
