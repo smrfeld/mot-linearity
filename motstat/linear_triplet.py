@@ -19,6 +19,12 @@ class LinTriplet:
     m23_max: Optional[float] = None
 
 
+@dataclass
+class LinSeg:
+    idx_start_incl: int
+    idx_end_incl: int
+
+
 class LinTripletChecker:
 
 
@@ -145,3 +151,35 @@ class LinTripletChecker:
             idx_linear.append(i)
 
         return idx_linear
+
+    def lin_idxs_to_segments(self, idxs: List[int]) -> List[LinSeg]:
+        if len(idxs) == 0:
+            return []
+        
+        max_idx = max(idxs)
+        segments = []
+        for idx in range(max_idx+1):
+            
+            if idx in idxs:
+                # Not any segments yet
+                if len(segments) == 0:
+                    segments.append(LinSeg(idx,idx))
+                    continue
+
+                # Check if continues => extend
+                if segments[-1].idx_end_incl == idx-1:
+                    # Continues
+                    segments[-1].idx_end_incl = idx
+                else:
+                    # New segment
+                    segments.append(LinSeg(idx,idx))
+
+        # All segments go "one further" because they are the center pts of linear triplets
+        # Add 1 to the start and end idxs
+        segments = [LinSeg(seg.idx_start_incl-1, seg.idx_end_incl+1) for seg in segments]
+
+        # Check min length = 3
+        for seg in segments:
+            assert seg.idx_end_incl - seg.idx_start_incl + 1 >= 3, f"Segment {seg} is too short, should be at least 3 pts"
+
+        return segments

@@ -1,5 +1,5 @@
 from motstat.data import Track, length_boxes_center
-from motstat.linear_triplet import LinTripletChecker
+from motstat.linear_triplet import LinTripletChecker, LinSeg
 
 
 from typing import List
@@ -11,12 +11,6 @@ import numpy as np
 def find_linear_triplets(track: Track, checker: LinTripletChecker) -> List[int]:
     xyxys = [box.xyxy for box in track.boxes]
     return checker.find_linear_triplets_xyxy(xyxys)
-
-
-@dataclass
-class LinSeg:
-    idx_start_incl: int
-    idx_end_incl: int
 
 
 @dataclass
@@ -96,26 +90,5 @@ class LinSegs:
 
 def find_linear_segments(track: Track, checker: LinTripletChecker) -> LinSegs:
     idxs = find_linear_triplets(track, checker)
-
-    segments = []
-    no_boxes = len(track.boxes)
-    for i in range(no_boxes):
-        
-        if i in idxs:
-            # Not any segments yet
-            if len(segments) == 0:
-                segments.append(LinSeg(i,i))
-                continue
-
-            # Check if continues => extend
-            if segments[-1].idx_end_incl == i-1:
-                # Continues
-                segments[-1].idx_end_incl = i
-            else:
-                # New segment
-                segments.append(LinSeg(i,i))
-
-    # All segments go "one further" because they are the center pts of linear triplets
-    # Add 1 to the start and end idxs
-    segments = [LinSeg(seg.idx_start_incl-1, seg.idx_end_incl+1) for seg in segments]
+    segments = checker.lin_idxs_to_segments(idxs)
     return LinSegs(segments, track)

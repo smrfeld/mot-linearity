@@ -6,16 +6,28 @@ import argparse
 from tqdm import tqdm
 import json
 import numpy as np
+import os
+
+
+def write_fig(fig: go.Figure, bname: str, figures_dir: str):
+    os.makedirs(figures_dir, exist_ok=True)
+    fname = os.path.join(figures_dir, bname)
+    fig.write_image(fname)
+    print(f"Wrote to {fname}")
+
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--mot-dir", type=str, help="MOT labels directory, e.g. MOT17Labels or MOT20Labels", required=True)
-    parser.add_argument("--command", type=str, help="Command", required=True, choices=["plot-traj", "plot-traj-tog", "hist-analysis", "tol-analysis", "perturb-analysis", "sim-random-walk"])
+    parser.add_argument("--command", type=str, help="Command", required=True, choices=["plot-traj", "plot-traj-tog", "lin-analysis", "random-walk-sim", "random-walk-analysis"])
     parser.add_argument("--file", type=str, help="File to plot", required=False, default="MOT17-09-FRCNN")
     parser.add_argument("--track-ids", type=int, help="Track indexes to plot", required=False, nargs="+", default=[9,10,5])
     parser.add_argument("--tol", type=float, help="Tolerance", required=False, default=0.1)
     parser.add_argument("--show", action="store_true", help="Show plots")
+    parser.add_argument("--disp-json", type=str, help="File name to write displacements to", required=False, default="displacements.json")
+    parser.add_argument("--random-walk-json", type=str, help="File name to write random walk to", required=False, default="random_walk.json")
+    parser.add_argument("--figures-dir", type=str, help="Directory to write figures to", required=False, default="figures")
     args = parser.parse_args()
 
     # Load the data
@@ -51,9 +63,7 @@ if __name__ == "__main__":
 
             if args.show:
                 fig.show()
-            fname = f"{args.file}_{track_id}_tog_tol_{args.tol:.2f}.png"
-            fig.write_image(fname)
-            print(f"Wrote to {fname}")
+            write_fig(fig, f"{args.file}_{track_id}_tog_tol_{args.tol:.2f}.png", args.figures_dir)
 
     elif args.command == "plot-traj":
 
@@ -74,9 +84,7 @@ if __name__ == "__main__":
                 )
             if args.show:
                 fig.show()
-            fname = f"{args.file}_{track_id}.png"
-            fig.write_image(fname)
-            print(f"Wrote to {fname}")
+            write_fig(fig, f"{args.file}_{track_id}.png", args.figures_dir)
 
             fig = go.Figure()
             pt = PlotterTrajs(fig)
@@ -87,21 +95,72 @@ if __name__ == "__main__":
                 )
             if args.show:
                 fig.show()
-            fname = f"{args.file}_{track_id}_incl_lin_segments_tol_{args.tol:.2f}.png"
-            fig.write_image(fname)
-            print(f"Wrote to {fname}")
+            write_fig(fig, f"{args.file}_{track_id}_incl_lin_segments_tol_{args.tol:.2f}.png", args.figures_dir)
 
-    elif args.command == "hist-analysis":
+    elif args.command == "random-walk-sim":
+        bbox_coord_displacements = ms.measure_bbox_coord_displacements(file_to_tracks)
 
-        lin_segments_duration_idxs, track_displacements_pixels = [], []
-        for fname,tracks in tqdm(file_to_tracks.items(), desc="Measuring linear stats for each file"):
-            for track_id,track in tracks.tracks.items():
+        fig = go.Figure()
+        ph = PlotterHist(fig)
+        ph.add_lin_segments_hist(bbox_coord_displacements)
+        fig.update_layout(
+            xaxis_range=[-10,10],
+            width=1000,
+            xaxis_title="Displacements (pixels)",
+            title=f"Displacements of boxes between neighboring frames",
+            )
+        if args.show:
+            fig.show()
+        write_fig(fig, f"histogram_displacements.png", args.figures_dir)
 
-                checker = ms.LinTripletChecker(ms.LinTripletChecker.Options(mode=ms.LinTripletChecker.Options.Mode.TOL, tol=args.tol))
-                segments = ms.find_linear_segments(track, checker)
-                stats = segments.stats()
-                lin_segments_duration_idxs += stats.lin_segments_duration_idxs
-                track_displacements_pixels += stats.track_displacements_pixels
+        mean = np.mean(bbox_coord_displacements, dtype=float)
+        std = np.std(bbox_coord_displacements, dtype=float)
+        print(f"Mean displacement = {mean:.2f} +- {std:.2f} pixels")
+
+        # Write distribution to file
+        disp_to_prob = {}
+        for disp in range(-10,10):
+            disp_min = disp-0.5
+            disp_max = disp+0.5
+            disp_to_prob[disp] = len([ d for d in bbox_coord_displacements if disp_min <= d < disp_max ])
+        tot = sum(disp_to_prob.values())
+        for disp in disp_to_prob:
+            disp_to_prob[disp] /= tot
+
+        with open(args.disp_json, "w") as f:
+            json.dump(disp_to_prob, f, indent=3)
+            print(f"Wrote to {args.disp_json}")
+
+        # Simulate random walk
+        trajs = ms.sample_random_walk(no_trajs=100, no_pts_per_traj=100, displacement_to_prob=disp_to_prob)
+        
+        with open(args.random_walk_json, "w") as f:
+            json.dump([t.to_dict() for t in trajs], f, indent=None)
+            print(f"Wrote to {args.random_walk_json}")
+
+    elif args.command == "random-walk-analysis":
+
+        # Load displacements
+        with open(args.random_walk_json, "r") as f:
+            trajs = json.load(f)
+
+        res = ms.measure_lin_trajs(trajs, tol=args.tol)
+        print(f"Ave fraction of linear points = {res.frac_of_pts_in_lin_segments_mean:.2f} +- {res.frac_of_pts_in_lin_segments_std:.2f} found by random walk simulation with slope difference tol={args.tol}")
+
+        # Histogram
+        fig = go.Figure()
+        ph = PlotterHist(fig)
+        ph.add_lin_segments_hist(res.lin_seg_durations_idxs)
+        if args.show:
+            fig.show()
+
+    elif args.command == "lin-analysis":
+
+        # Linear segments duration analysis
+        lin_segments_duration_idxs = ms.measure_lin_segments_duration_idxs(file_to_tracks, tol=args.tol)
+        mean = np.mean(lin_segments_duration_idxs, dtype=float)
+        std = np.std(lin_segments_duration_idxs, dtype=float)
+        print(f"Mean duration of linear segments = {mean:.2f} +- {std:.2f} frames")
 
         fig = go.Figure()
         ph = PlotterHist(fig)
@@ -111,82 +170,27 @@ if __name__ == "__main__":
             )
         if args.show:
             fig.show()
-        fname = f"histogram_tol_{args.tol:.2f}.png"
-        fig.write_image(fname)
-        print(f"Wrote to {fname}")
+        write_fig(fig, f"histogram_tol_{args.tol:.2f}.png", args.figures_dir)
 
-        fig = go.Figure()
-        ph = PlotterHist(fig)
-        ph.add_lin_segments_hist(track_displacements_pixels)
-        fig.update_layout(
-            xaxis_range=[0,10],
-            xaxis_title="Displacements (pixels)",
-            title=f"Displacements of boxes between neighboring frames",
-            )
-        if args.show:
-            fig.show()
-
-        mean = np.mean(track_displacements_pixels, dtype=float)
-        std = np.std(track_displacements_pixels, dtype=float)
-        print(f"Mean displacement = {mean:.2f} +- {std:.2f} pixels")
-
-        # Write distribution to file
-        disp_to_perc = {}
-        for disp in range(10):
-            disp_min = disp-0.5
-            disp_max = disp+0.5
-            disp_to_perc[disp] = len([ d for d in track_displacements_pixels if disp_min <= d < disp_max ])
-        tot = sum(disp_to_perc.values())
-        for disp in disp_to_perc:
-            disp_to_perc[disp] /= tot
-
-        fname = "displacements.json"
-        with open(fname, "w") as f:
-            json.dump(disp_to_perc, f, indent=3)
-            print(f"Wrote to {fname}")
-
-    elif args.command == "sim-random-walk":
-
-        # Load displacements
-        with open("MOT17_displacements.json", "r") as f:
-            disp_to_perc = { int(k): float(v) for k,v in json.load(f).items() }
-
-        # Simulate random walk
-        trajs = {}
-        for itraj in range(0,100):
-
-            pts = [[0,0]]
-            trajs[itraj] = pts
-            for j in range(0,100):
-                # Sample displacement
-                disp_x = np.random.choice(list(disp_to_perc.keys()), p=list(disp_to_perc.values()))
-                disp_y = np.random.choice(list(disp_to_perc.keys()), p=list(disp_to_perc.values()))
-                
-                # Add to points
-                pts.append([pts[-1][0]+int(disp_x), pts[-1][1]+int(disp_y)])
-        
-        with open("random_walk.json", "w") as f:
-            json.dump(trajs, f, indent=None)
-            print(f"Wrote to random_walk.json")
-
-    elif args.command == "tol-analysis":
-
+        # Tolerance analysis
+        print("---")
         tol_to_ave_frac = ms.measure_tol_to_ave_frac(file_to_tracks)
+        print("Average fraction of points in linear segments by tolerance:")
         for tol,ave_frac in tol_to_ave_frac.items():
-            print(f"tol={tol:.2f}, ave_frac={ave_frac:.2f}")
+            print(f"\ttol={tol:.2f}, ave_frac={ave_frac:.2f}")
+
         fig = go.Figure()
         pf = PlotterFrac(fig)
         pf.add_tol_to_ave_frac(tol_to_ave_frac)
         if args.show:
             fig.show()
+        write_fig(fig, f"tol_analysis.png", args.figures_dir)
 
-        fig.write_image(f"tol_analysis.png")
-
-    elif args.command == "perturb-analysis":
-
+        # Perturb analysis
+        print("---")
         perturb_mag = 0.5
-        ave_frac_perturb = ms.measure_ave_frac_perturb(file_to_tracks, perturb_mag)
-        print(f"Ave fraction of linear points = {ave_frac_perturb:.2f} found by perturbing with magnitude {perturb_mag}")
+        frac_perturb_ave, frac_perturb_std = ms.measure_ave_frac_perturb(file_to_tracks, perturb_mag)
+        print(f"Ave fraction of linear points = {frac_perturb_ave:.2f} +- {frac_perturb_std:.2f} found by perturbing with magnitude {perturb_mag}")
 
     else:
         raise NotImplementedError(f"Command {args.command} not implemented")
