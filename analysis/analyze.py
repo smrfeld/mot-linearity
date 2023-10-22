@@ -136,17 +136,24 @@ if __name__ == "__main__":
         res = ms.measure_lin_trajs(trajs, tol=args.tol)
         print(f"Ave fraction of linear points = {res.frac_of_pts_in_lin_segments_mean:.2f} +- {res.frac_of_pts_in_lin_segments_std:.2f} found by random walk simulation with slope difference tol={args.tol}")
 
-        # Histogram
+        # Tolerance analysis
+        print("---")
+        tol_to_ave_frac = ms.measure_tol_to_ave_frac_all_files(file_to_tracks)
+        print("Average fraction of points in linear segments by tolerance:")
+        for tol,ave_frac in tol_to_ave_frac.items():
+            print(f"\ttol={tol:.2f}, ave_frac={ave_frac:.2f}")
+
         fig = go.Figure()
-        ph = PlotterHist(fig)
-        ph.add_hist(res.lin_seg_durations_idxs)
+        pf = PlotterFrac(fig)
+        pf.add_tol_to_ave_frac(tol_to_ave_frac)
         if args.show:
             fig.show()
+        write_fig(fig, f"tol_analysis.png", args.figures_dir)
 
     elif args.command == "lin-analysis":
 
         # Linear segments duration analysis
-        lin_segments_duration_idxs = ms.measure_lin_segments_duration_idxs(file_to_tracks, tol=args.tol)
+        lin_segments_duration_idxs = ms.measure_lin_segments_duration_idxs_all_files(file_to_tracks, tol=args.tol)
         mean = np.mean(lin_segments_duration_idxs, dtype=float)
         std = np.std(lin_segments_duration_idxs, dtype=float)
         print(f"Mean duration of linear segments = {mean:.2f} +- {std:.2f} frames")
@@ -163,7 +170,7 @@ if __name__ == "__main__":
 
         # Tolerance analysis
         print("---")
-        tol_to_ave_frac = ms.measure_tol_to_ave_frac(file_to_tracks)
+        tol_to_ave_frac = ms.measure_tol_to_ave_frac_all_files(file_to_tracks)
         print("Average fraction of points in linear segments by tolerance:")
         for tol,ave_frac in tol_to_ave_frac.items():
             print(f"\ttol={tol:.2f}, ave_frac={ave_frac:.2f}")
@@ -178,7 +185,7 @@ if __name__ == "__main__":
         # Perturb analysis
         print("---")
         perturb_mag = 0.5
-        frac_perturb_ave, frac_perturb_std = ms.measure_ave_frac_perturb(file_to_tracks, perturb_mag)
+        frac_perturb_ave, frac_perturb_std = ms.measure_ave_frac_perturb_all_files(file_to_tracks, perturb_mag)
         print(f"Ave fraction of linear points = {frac_perturb_ave:.2f} +- {frac_perturb_std:.2f} found by perturbing with magnitude {perturb_mag}")
 
     else:

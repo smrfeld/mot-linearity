@@ -1,8 +1,7 @@
-from motstat.data import load_tracks, Tracks, DataSpec, Track, Box
-from motstat.linear_analysis import LinSeg, LinSegs
+from motstat.data import TrackXyxy, Box
+from motstat.data_lin import LinSegs
 
-from typing import List, Dict, Tuple, Optional
-from dataclasses import dataclass
+from typing import List, Dict, Optional
 import plotly.graph_objects as go
 
 
@@ -59,7 +58,7 @@ class PlotterTrajs:
         self.fig.add_trace(trace, row=row, col=col)
 
 
-    def add_track(self, track: Track, excl_markers_for_idxs: List[int] = [], row: Optional[int] = None, col: Optional[int] = None):
+    def add_track(self, track: TrackXyxy, excl_markers_for_idxs: List[int] = [], row: Optional[int] = None, col: Optional[int] = None):
         self.add_box(track.boxes[0], color="gray", row=row, col=col)
 
         x = [box.xyxy[0] for box in track.boxes]
@@ -79,7 +78,7 @@ class PlotterTrajs:
         self.add_box(track.boxes[-1], color="gray", row=row, col=col)
 
 
-    def add_lin_segments(self, segments: LinSegs, track: Track, row: Optional[int] = None, col: Optional[int] = None):
+    def add_lin_segments(self, segments: LinSegs, track: TrackXyxy, row: Optional[int] = None, col: Optional[int] = None):
         for seg in segments.segments:
             for i,j in [(0,1),(2,3)]:
                 x = [track.boxes[x].xyxy[i] for x in range(seg.idx_start_incl, seg.idx_end_incl+1)]
