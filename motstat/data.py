@@ -59,7 +59,7 @@ class TracksXy(DataClassDictMixin):
 
 Track = Union[TrackXyxy, TrackXy]
 Tracks = Union[TracksXyxy, TracksXy]
-
+FileToTracks = Union[Dict[str,TracksXyxy], Dict[str,TracksXy]]
 
 def xywh_to_xyxy(xywh: List[float]) -> List[float]:
     x, y, w, h = xywh

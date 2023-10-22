@@ -16,10 +16,49 @@ def write_fig(fig: go.Figure, bname: str, figures_dir: str):
     print(f"Wrote to {fname}")
 
 
+def linear_analysis(file_to_tracks: ms.FileToTracks, tol: float, show: bool, figures_dir: str, figures_tag: str):
+
+    # Linear segments duration analysis
+    lin_segments_duration_idxs = ms.measure_lin_segments_duration_idxs_all_files(file_to_tracks, tol=tol)
+    mean = np.mean(lin_segments_duration_idxs, dtype=float)
+    std = np.std(lin_segments_duration_idxs, dtype=float)
+    print(f"Mean duration of linear segments = {mean:.2f} +- {std:.2f} frames")
+
+    fig = go.Figure()
+    ph = PlotterHist(fig)
+    ph.add_hist(lin_segments_duration_idxs)
+    fig.update_layout(
+        title=f"Linear segments duration<br>(slope difference tol={tol})",
+        )
+    if show:
+        fig.show()
+    write_fig(fig, f"histogram_tol_{tol:.2f}_{figures_tag}.png", figures_dir)
+
+    # Tolerance analysis
+    print("---")
+    tol_to_ave_frac = ms.measure_tol_to_ave_frac_all_files(file_to_tracks)[0]
+    print("Average fraction of points in linear segments by tolerance:")
+    for tol,ave_frac in tol_to_ave_frac.items():
+        print(f"\ttol={tol:.2f}, ave_frac={ave_frac:.2f}")
+
+    fig = go.Figure()
+    pf = PlotterFrac(fig)
+    pf.add_tol_to_ave_frac(tol_to_ave_frac)
+    if show:
+        fig.show()
+    write_fig(fig, f"tol_analysis_{figures_tag}.png", figures_dir)
+
+    # Perturb analysis
+    print("---")
+    perturb_mag = 0.5
+    frac_perturb_ave, frac_perturb_std, _ = ms.measure_ave_frac_perturb_all_files(file_to_tracks, perturb_mag)
+    print(f"Ave fraction of linear points = {frac_perturb_ave:.2f} +- {frac_perturb_std:.2f} found by perturbing with magnitude {perturb_mag}")
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mot-dir", type=str, help="MOT labels directory, e.g. MOT17Labels or MOT20Labels", required=True)
+    parser.add_argument("--mot", type=str, help="MOT", required=True, choices=[ms.DataSpec.Mot.MOT17.value, ms.DataSpec.Mot.MOT20.value])
     parser.add_argument("--command", type=str, help="Command", required=True, choices=["plot-traj", "plot-traj-tog", "lin-analysis", "random-walk-sim", "random-walk-analysis"])
     parser.add_argument("--file", type=str, help="File to plot", required=False, default="MOT17-09-FRCNN")
     parser.add_argument("--track-ids", type=int, help="Track indexes to plot", required=False, nargs="+", default=[9,10,5])
@@ -31,8 +70,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load the data
-    file_to_tracks = ms.load_tracks(ms.DataSpec(
-        mot=ms.DataSpec.Mot.MOT17,
+    mot_file_to_tracks = ms.load_tracks(ms.DataSpec(
+        mot=ms.DataSpec.Mot(args.mot),
         split=ms.DataSpec.Split.TRAIN,
         mode=ms.DataSpec.Mode.GT,
         mot17_method=ms.DataSpec.Mot17Method.FRCNN
@@ -40,8 +79,8 @@ if __name__ == "__main__":
 
     if args.command == "plot-traj-tog":
 
-        assert args.file in file_to_tracks, f"File {args.file} not found in {args.mot_dir}"
-        tracks = file_to_tracks[args.file]
+        assert args.file in mot_file_to_tracks, f"File {args.file} not found in {args.mot_dir}"
+        tracks = mot_file_to_tracks[args.file]
         for track_id in args.track_ids:
             assert track_id in tracks.tracks, f"Track {track_id} not found in {args.file}"
             track = tracks.tracks[track_id]
@@ -68,8 +107,8 @@ if __name__ == "__main__":
 
     elif args.command == "plot-traj":
 
-        assert args.file in file_to_tracks, f"File {args.file} not found in {args.mot_dir}"
-        tracks = file_to_tracks[args.file]
+        assert args.file in mot_file_to_tracks, f"File {args.file} not found in {args.mot_dir}"
+        tracks = mot_file_to_tracks[args.file]
         for track_id in args.track_ids:
             assert track_id in tracks.tracks, f"Track {track_id} not found in {args.file}"
             track = tracks.tracks[track_id]
@@ -99,7 +138,7 @@ if __name__ == "__main__":
             write_fig(fig, f"{args.file}_{track_id}_incl_lin_segments_tol_{args.tol:.2f}.png", args.figures_dir)
 
     elif args.command == "random-walk-sim":
-        disps = ms.measure_bbox_coord_displacements(file_to_tracks)
+        disps = ms.measure_bbox_coord_displacements(mot_file_to_tracks)
         assert len(disps.xy_disps) > 0, "No displacements found"
 
         fig = make_subplots(rows=1, cols=2)
@@ -120,73 +159,24 @@ if __name__ == "__main__":
         print(f"Mean displacement in y = {disps.xy_disp_mean[1]:.2f} +- {disps.xy_disp_std[1]:.2f} pixels")
 
         # Simulate random walk
-        trajs = ms.sample_random_walk(no_trajs=100, no_pts_per_traj=100, disps_probs=disps.disps_probs)
+        tracks = ms.sample_random_walk(no_trajs=100, no_pts_per_traj=100, disps_probs=disps.disps_probs)
         
         with open(args.random_walk_json, "w") as f:
-            json.dump([t.to_dict() for t in trajs], f, indent=None)
+            json.dump(tracks.to_dict(), f, indent=None)
             print(f"Wrote to {args.random_walk_json}")
 
     elif args.command == "random-walk-analysis":
 
         # Load displacements
+        assert os.path.exists(args.random_walk_json), f"File {args.random_walk_json} not found - run random-walk-sim first"
         with open(args.random_walk_json, "r") as f:
-            trajs = [ ms.RandomWalk.from_dict(d) for d in json.load(f) ]
-            print(f"Loaded {len(trajs)} trajs from {args.random_walk_json}")
+            tracks = ms.TracksXy.from_dict(json.load(f))
+            print(f"Loaded {len(tracks.tracks)} trajs from {args.random_walk_json}")
 
-        res = ms.measure_lin_trajs(trajs, tol=args.tol)
-        print(f"Ave fraction of linear points = {res.frac_of_pts_in_lin_segments_mean:.2f} +- {res.frac_of_pts_in_lin_segments_std:.2f} found by random walk simulation with slope difference tol={args.tol}")
-
-        # Tolerance analysis
-        print("---")
-        tol_to_ave_frac = ms.measure_tol_to_ave_frac_all_files(file_to_tracks)
-        print("Average fraction of points in linear segments by tolerance:")
-        for tol,ave_frac in tol_to_ave_frac.items():
-            print(f"\ttol={tol:.2f}, ave_frac={ave_frac:.2f}")
-
-        fig = go.Figure()
-        pf = PlotterFrac(fig)
-        pf.add_tol_to_ave_frac(tol_to_ave_frac)
-        if args.show:
-            fig.show()
-        write_fig(fig, f"tol_analysis.png", args.figures_dir)
+        linear_analysis({ "random_walk": tracks }, args.tol, args.show, args.figures_dir, args.mot)
 
     elif args.command == "lin-analysis":
-
-        # Linear segments duration analysis
-        lin_segments_duration_idxs = ms.measure_lin_segments_duration_idxs_all_files(file_to_tracks, tol=args.tol)
-        mean = np.mean(lin_segments_duration_idxs, dtype=float)
-        std = np.std(lin_segments_duration_idxs, dtype=float)
-        print(f"Mean duration of linear segments = {mean:.2f} +- {std:.2f} frames")
-
-        fig = go.Figure()
-        ph = PlotterHist(fig)
-        ph.add_hist(lin_segments_duration_idxs)
-        fig.update_layout(
-            title=f"Linear segments duration<br>(slope difference tol={args.tol})",
-            )
-        if args.show:
-            fig.show()
-        write_fig(fig, f"histogram_tol_{args.tol:.2f}.png", args.figures_dir)
-
-        # Tolerance analysis
-        print("---")
-        tol_to_ave_frac = ms.measure_tol_to_ave_frac_all_files(file_to_tracks)
-        print("Average fraction of points in linear segments by tolerance:")
-        for tol,ave_frac in tol_to_ave_frac.items():
-            print(f"\ttol={tol:.2f}, ave_frac={ave_frac:.2f}")
-
-        fig = go.Figure()
-        pf = PlotterFrac(fig)
-        pf.add_tol_to_ave_frac(tol_to_ave_frac)
-        if args.show:
-            fig.show()
-        write_fig(fig, f"tol_analysis.png", args.figures_dir)
-
-        # Perturb analysis
-        print("---")
-        perturb_mag = 0.5
-        frac_perturb_ave, frac_perturb_std = ms.measure_ave_frac_perturb_all_files(file_to_tracks, perturb_mag)
-        print(f"Ave fraction of linear points = {frac_perturb_ave:.2f} +- {frac_perturb_std:.2f} found by perturbing with magnitude {perturb_mag}")
+        linear_analysis(mot_file_to_tracks, args.tol, args.show, args.figures_dir, args.mot)
 
     else:
         raise NotImplementedError(f"Command {args.command} not implemented")

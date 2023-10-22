@@ -1,4 +1,4 @@
-from motstat.data import Track, Tracks
+from motstat.data import Track, Tracks, FileToTracks
 from motstat.lin_detection import find_linear_segments, LinTripletChecker
 
 
@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 
 
-def measure_ave_frac_perturb_all_files(file_to_tracks: Dict[str,Tracks], perturb_mag: float) -> Tuple[float,float,List[float]]:
+def measure_ave_frac_perturb_all_files(file_to_tracks: FileToTracks, perturb_mag: float) -> Tuple[float,float,List[float]]:
     frac_list = []
     for fname,tracks in tqdm(file_to_tracks.items(), desc="Measuring linear stats for each file"):
         _,_,frac_list_for_file = measure_ave_frac_perturb(tracks, perturb_mag)
@@ -28,7 +28,7 @@ def measure_ave_frac_perturb(tracks: Tracks, perturb_mag: float) -> Tuple[float,
     return np.mean(frac_list, dtype=float), np.std(frac_list, dtype=float), frac_list
 
 
-def measure_tol_to_ave_frac_all_files(file_to_tracks: Dict[str,Tracks]) -> Tuple[Dict[float,float],Dict[float,List[float]]]:
+def measure_tol_to_ave_frac_all_files(file_to_tracks: FileToTracks) -> Tuple[Dict[float,float],Dict[float,List[float]]]:
     tol_to_frac_list: Dict[float,List[float]] = {}
     for fname,tracks in tqdm(file_to_tracks.items(), desc="Measuring linear stats for each file"):
         _, tol_to_frac = measure_tol_to_ave_frac(tracks)
@@ -66,7 +66,7 @@ def measure_tol_to_frac_for_track(track: Track) -> Dict[float,float]:
     return tol_to_frac
 
 
-def measure_lin_segments_duration_idxs_all_files(file_to_tracks: Dict[str,Tracks], tol: float) -> List[float]:
+def measure_lin_segments_duration_idxs_all_files(file_to_tracks: FileToTracks, tol: float) -> List[float]:
     lin_segments_duration_idxs = []
     for fname,tracks in tqdm(file_to_tracks.items(), desc="Measuring linear stats for each file"):
         lin_segments_duration_idxs += measure_lin_segments_duration_idxs(tracks, tol)
