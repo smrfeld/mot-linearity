@@ -9,20 +9,20 @@ import numpy as np
 
 
 @dataclass
-class Box(DataClassDictMixin):
+class Entry(DataClassDictMixin):
     frame_id: int
     track_id: int
-    xyxy: List[float]
-    is_gt: bool
+    data: List[float]
+    is_gt: bool = True
     conf: Optional[float] = None
     consider: Optional[bool] = None
 
 
-def length_boxes_center(boxes: List[Box]) -> float:
+def length_boxes_center(boxes: List[Entry]) -> float:
     dist_center = 0
     for i in range(len(boxes)-1):
-        xyxy1 = boxes[i].xyxy
-        xyxy2 = boxes[i+1].xyxy
+        xyxy1 = boxes[i].data
+        xyxy2 = boxes[i+1].data
 
         center1 = [(xyxy1[0] + xyxy1[2]) / 2, (xyxy1[1] + xyxy1[3]) / 2]
         center2 = [(xyxy2[0] + xyxy2[2]) / 2, (xyxy2[1] + xyxy2[3]) / 2]
@@ -34,17 +34,17 @@ def length_boxes_center(boxes: List[Box]) -> float:
 @dataclass
 class TrackXyxy(DataClassDictMixin):
     track_id: int
-    boxes: List[Box]
+    entries: List[Entry]
     is_gt: bool
 
     def length_pixels_center(self) -> float:
-        return length_boxes_center(self.boxes)
+        return length_boxes_center(self.entries)
 
 
 @dataclass
 class TrackXy(DataClassDictMixin):
     track_id: int
-    pts: List[List[int]]
+    entries: List[Entry]
 
 
 @dataclass
@@ -66,7 +66,7 @@ def xywh_to_xyxy(xywh: List[float]) -> List[float]:
     return [x, y, x + w, y + h]
 
 
-def parse_line(s: str, is_gt: bool) -> Box:
+def parse_line(s: str, is_gt: bool) -> Entry:
     # Line format:
     # <frame>, <id>, <bb_left>, <bb_top>, <bb_width>, <bb_height>, <consider_entry or conf>, <x>, <y>, <z>
     items = s.split(",")
@@ -74,10 +74,10 @@ def parse_line(s: str, is_gt: bool) -> Box:
     frame_id, track_id, bb_left, bb_top, bb_width, bb_height, consider_entry_or_conf = items[:7]
     xywh = [float(bb_left), float(bb_top), float(bb_width), float(bb_height)]
     xyxy = xywh_to_xyxy(xywh)
-    return Box(
+    return Entry(
         frame_id=int(frame_id),
         track_id=int(track_id),
-        xyxy=xyxy,
+        data=xyxy,
         is_gt=is_gt,
         conf=float(consider_entry_or_conf) if not is_gt else None,
         consider=bool(consider_entry_or_conf) if is_gt else None
@@ -91,12 +91,12 @@ def read_file(fname: str, is_gt: bool) -> TracksXyxy:
 
     tracks = TracksXyxy({})
     for box in boxes:
-        tracks.tracks.setdefault(box.track_id, TrackXyxy(track_id=box.track_id, boxes=[], is_gt=is_gt))
-        tracks.tracks[box.track_id].boxes.append(box)
+        tracks.tracks.setdefault(box.track_id, TrackXyxy(track_id=box.track_id, entries=[], is_gt=is_gt))
+        tracks.tracks[box.track_id].entries.append(box)
 
     # Sort
     for track in tracks.tracks.values():
-        track.boxes.sort(key=lambda box: box.frame_id)
+        track.entries.sort(key=lambda box: box.frame_id)
 
     return tracks
 
@@ -175,8 +175,8 @@ def measure_bbox_coord_displacements(file_to_tracks: Dict[str,TracksXyxy]) -> Bo
     for fname,tracks in tqdm(file_to_tracks.items(), desc="Measuring linear stats for each file"):
         for track_id,track in tracks.tracks.items():
             
-            disps.xy_disps += [ (track.boxes[i+1].xyxy[0] - track.boxes[i].xyxy[0], track.boxes[i+1].xyxy[1] - track.boxes[i].xyxy[1]) for i in range(len(track.boxes)-1) ]
-            disps.xy_disps += [ (track.boxes[i+1].xyxy[2] - track.boxes[i].xyxy[2], track.boxes[i+1].xyxy[3] - track.boxes[i].xyxy[3]) for i in range(len(track.boxes)-1) ]
+            disps.xy_disps += [ (track.entries[i+1].data[0] - track.entries[i].data[0], track.entries[i+1].data[1] - track.entries[i].data[1]) for i in range(len(track.entries)-1) ]
+            disps.xy_disps += [ (track.entries[i+1].data[2] - track.entries[i].data[2], track.entries[i+1].data[3] - track.entries[i].data[3]) for i in range(len(track.entries)-1) ]
 
     disps.xy_disp_mean = (np.mean([ xy_disp[0] for xy_disp in disps.xy_disps ], dtype=float), np.mean([ xy_disp[1] for xy_disp in disps.xy_disps ], dtype=float))
     disps.xy_disp_std = (np.std([ xy_disp[0] for xy_disp in disps.xy_disps ], dtype=float), np.std([ xy_disp[1] for xy_disp in disps.xy_disps ], dtype=float))

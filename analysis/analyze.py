@@ -55,6 +55,32 @@ def linear_analysis(file_to_tracks: ms.FileToTracks, tol: float, show: bool, fig
     print(f"Ave fraction of linear points = {frac_perturb_ave:.2f} +- {frac_perturb_std:.2f} found by perturbing with magnitude {perturb_mag}")
 
 
+def plot_traj_tog(track_ids: List[int], tracks: ms.Tracks):
+    for track_id in track_ids:
+        assert track_id in tracks.tracks, f"Track {track_id} not found in {args.file}"
+        track = tracks.tracks[track_id]
+
+        checker = ms.LinTripletChecker(ms.LinTripletChecker.Options(mode=ms.LinTripletChecker.Options.Mode.TOL, tol=args.tol))
+        segments = ms.find_linear_segments(track, checker)
+
+        fig = make_subplots(rows=1, cols=2)
+        pt = PlotterTrajs(fig)
+        pt.add_track(track, row=1, col=1)
+
+        pt = PlotterTrajs(fig)
+        pt.add_track(track, excl_markers_for_idxs=segments.idxs_in_lin_segments, row=1, col=2)
+        pt.add_lin_segments(segments, track, row=1, col=2)
+
+        fig.update_layout(
+            title=f"Track {track_id} from {args.file} (slope difference tol={args.tol})",
+            width=1600,
+            )
+
+        if args.show:
+            fig.show()
+        write_fig(fig, f"{args.file}_{track_id}_tog_tol_{args.tol:.2f}.png", args.figures_dir)
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()

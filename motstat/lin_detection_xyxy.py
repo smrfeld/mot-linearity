@@ -7,11 +7,11 @@ from typing import List
 
 
 def find_linear_triplets(track: TrackXyxy, checker: LinTripletChecker) -> List[int]:
-    xyxys = [box.xyxy for box in track.boxes]
+    xyxys = [box.data for box in track.entries]
     return checker.find_linear_triplets_xyxy(xyxys)
 
 
 def find_linear_segments(track: TrackXyxy, checker: LinTripletChecker) -> LinSegs:
     idxs = find_linear_triplets(track, checker)
     segments = checker.lin_idxs_to_segments(idxs)
-    return LinSegs(segments, no_points_in_track=len(track.boxes), track_id=track.track_id)
+    return LinSegs(segments, no_points_in_track=len(track.entries), track_id=track.track_id)
