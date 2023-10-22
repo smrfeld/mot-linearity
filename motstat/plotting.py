@@ -1,7 +1,7 @@
 from motstat.data import TrackXyxy, Entry, Track, TrackXy
 from motstat.data_lin import LinSegs
 
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Tuple
 import plotly.graph_objects as go
 
 
@@ -145,7 +145,7 @@ class PlotterHist:
 
 
     def add_hist(self, data: List[float], row: Optional[int] = None, col: Optional[int] = None):
-        trace = go.Histogram(x=data, xbins=dict(size=1), histnorm='percent')
+        trace = go.Histogram(x=data, xbins=dict(size=1), histnorm='percent', showlegend=False)
         self.fig.add_trace(trace, row=row, col=col)
 
 
@@ -171,11 +171,18 @@ class PlotterFrac:
         )
 
 
-    def add_tol_to_ave_frac(self, tol_to_ave_frac: Dict[float,float]):
+    def add_tol_to_ave_frac(self, tol_to_ave_std_frac: Dict[float,Tuple[float,float]]):
+        # std = error bars
+        tol_to_ave_frac = { tol: ave_frac for tol,(ave_frac,std_frac) in tol_to_ave_std_frac.items() }
         self.fig.add_trace(go.Scatter(
             x=list(tol_to_ave_frac.keys()),
             y=list(tol_to_ave_frac.values()),
             mode="lines+markers",
             marker=dict(size=10),
             line=dict(width=2),
+            error_y=dict(
+                type='data',
+                array=[std_frac for tol,(ave_frac,std_frac) in tol_to_ave_std_frac.items()],
+                visible=True
+                )
             ))

@@ -46,11 +46,11 @@ def linear_analysis(file_to_tracks: ms.FileToTracks, tol: float, show: bool, fig
 
     fig = go.Figure()
     pf = PlotterFrac(fig)
-    pf.add_tol_to_ave_frac({ tol: ave_frac for tol,(ave_frac,std_frac) in tol_to_frac_ave_std.items() })
+    pf.add_tol_to_ave_frac(tol_to_frac_ave_std)
     if show:
         fig.show()
     fig.update_layout(
-        title=f"Fraction of points in linear segments ({figures_tag})<br>measured across all GT tracks",
+        title=f"Fraction of points in linear segments ({figures_tag})",
         )
     write_fig(fig, f"tol_analysis_{figures_tag.replace(' ','_')}.png", figures_dir)
 

@@ -140,7 +140,7 @@ def load_tracks(spec: DataSpec) -> Dict[str, TracksXyxy]:
     if spec.mot == DataSpec.Mot.MOT17:
         fnames_glob = os.path.join(spec.mot_dir, spec.split.value, "*-%s" % spec.mot17_method.value, spec.mode.value, "%s.txt" % spec.mode.value)
     elif spec.mot == DataSpec.Mot.MOT20:
-        fnames_glob = os.path.join(spec.mot_dir, spec.split.value, "*", spec.mode.value, "*", "%s.txt" % spec.mode.value)
+        fnames_glob = os.path.join(spec.mot_dir, spec.split.value, "*", spec.mode.value, "%s.txt" % spec.mode.value)
     else:
         raise NotImplementedError(f"Unknown MOT dataset {spec.mot}")
     fnames = glob.glob(fnames_glob)
