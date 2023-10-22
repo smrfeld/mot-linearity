@@ -88,6 +88,10 @@ def read_file(fname: str, is_gt: bool) -> Tracks:
 @dataclass
 class DataSpec(DataClassDictMixin):
 
+    class Mot(Enum):
+        MOT17 = "MOT17"
+        MOT20 = "MOT20"
+
     class Split(Enum):
         TRAIN = "train"
         TEST = "test"
@@ -96,13 +100,36 @@ class DataSpec(DataClassDictMixin):
         GT = "gt"
         DET = "det"
 
-    mot_dir: str
+    class Mot17Method(Enum):
+        DPM = "DPM"
+        FRCNN = "FRCNN"
+        SDP = "SDP"
+
+    mot: Mot
     split: Split = Split.TRAIN
     mode: Mode = Mode.GT
+    mot17_method: Mot17Method = Mot17Method.DPM
+
+    @property
+    def mot_dir(self):
+        if self.mot == self.Mot.MOT17:
+            return "MOT17Labels"
+        elif self.mot == self.Mot.MOT20:
+            return "MOT20Labels"
+        else:
+            raise NotImplementedError(f"Unknown MOT dataset {self.mot}")
 
 
 def load_tracks(spec: DataSpec) -> Dict[str, Tracks]:
-    fnames = glob.glob(os.path.join(spec.mot_dir, spec.split.value, "*", spec.mode.value, "%s.txt" % spec.mode.value))
+    if spec.mot == DataSpec.Mot.MOT17:
+        fnames_glob = os.path.join(spec.mot_dir, spec.split.value, "*-%s" % spec.mot17_method.value, spec.mode.value, "%s.txt" % spec.mode.value)
+    elif spec.mot == DataSpec.Mot.MOT20:
+        fnames_glob = os.path.join(spec.mot_dir, spec.split.value, "*", spec.mode.value, "*", "%s.txt" % spec.mode.value)
+    else:
+        raise NotImplementedError(f"Unknown MOT dataset {spec.mot}")
+    fnames = glob.glob(fnames_glob)
+    assert len(fnames) > 0, f"No files found in {fnames_glob}"
+
     tracks = {}
     for fname in fnames:
         tracks[os.path.basename(os.path.dirname(os.path.dirname(fname)))] = read_file(fname, spec.mode == "gt")

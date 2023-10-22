@@ -3,7 +3,7 @@ from motstat.plotting import PlotterTrajs, PlotterFrac, PlotterHist
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import argparse
-from tqdm import tqdm
+from typing import List
 import json
 import numpy as np
 import os
@@ -32,9 +32,10 @@ if __name__ == "__main__":
 
     # Load the data
     file_to_tracks = ms.load_tracks(ms.DataSpec(
-        mot_dir=args.mot_dir,
+        mot=ms.DataSpec.Mot.MOT17,
         split=ms.DataSpec.Split.TRAIN,
-        mode=ms.DataSpec.Mode.GT
+        mode=ms.DataSpec.Mode.GT,
+        mot17_method=ms.DataSpec.Mot17Method.FRCNN
         ))
 
     if args.command == "plot-traj-tog":
@@ -98,41 +99,28 @@ if __name__ == "__main__":
             write_fig(fig, f"{args.file}_{track_id}_incl_lin_segments_tol_{args.tol:.2f}.png", args.figures_dir)
 
     elif args.command == "random-walk-sim":
-        bbox_coord_displacements = ms.measure_bbox_coord_displacements(file_to_tracks)
+        disps = ms.measure_bbox_coord_displacements(file_to_tracks)
+        assert len(disps.xy_disps) > 0, "No displacements found"
 
-        fig = go.Figure()
+        fig = make_subplots(rows=1, cols=2)
         ph = PlotterHist(fig)
-        ph.add_lin_segments_hist(bbox_coord_displacements)
+        ph.add_hist([ xy[0] for xy in disps.xy_disps ], row=1, col=1)
+        fig.update_xaxes(title_text="Displacements in x (pixels)", range=[-10,10], row=1, col=1)
+        ph.add_hist([ xy[1] for xy in disps.xy_disps ], row=1, col=2)
+        fig.update_xaxes(title_text="Displacements in y (pixels)", range=[-10,10], row=1, col=2)
         fig.update_layout(
-            xaxis_range=[-10,10],
-            width=1000,
-            xaxis_title="Displacements (pixels)",
+            width=2000,
             title=f"Displacements of boxes between neighboring frames",
             )
         if args.show:
             fig.show()
         write_fig(fig, f"histogram_displacements.png", args.figures_dir)
 
-        mean = np.mean(bbox_coord_displacements, dtype=float)
-        std = np.std(bbox_coord_displacements, dtype=float)
-        print(f"Mean displacement = {mean:.2f} +- {std:.2f} pixels")
-
-        # Write distribution to file
-        disp_to_prob = {}
-        for disp in range(-10,10):
-            disp_min = disp-0.5
-            disp_max = disp+0.5
-            disp_to_prob[disp] = len([ d for d in bbox_coord_displacements if disp_min <= d < disp_max ])
-        tot = sum(disp_to_prob.values())
-        for disp in disp_to_prob:
-            disp_to_prob[disp] /= tot
-
-        with open(args.disp_json, "w") as f:
-            json.dump(disp_to_prob, f, indent=3)
-            print(f"Wrote to {args.disp_json}")
+        print(f"Mean displacement in x = {disps.xy_disp_mean[0]:.2f} +- {disps.xy_disp_std[0]:.2f} pixels")
+        print(f"Mean displacement in y = {disps.xy_disp_mean[1]:.2f} +- {disps.xy_disp_std[1]:.2f} pixels")
 
         # Simulate random walk
-        trajs = ms.sample_random_walk(no_trajs=100, no_pts_per_traj=100, displacement_to_prob=disp_to_prob)
+        trajs = ms.sample_random_walk(no_trajs=100, no_pts_per_traj=100, disps_probs=disps.disps_probs)
         
         with open(args.random_walk_json, "w") as f:
             json.dump([t.to_dict() for t in trajs], f, indent=None)
@@ -142,7 +130,8 @@ if __name__ == "__main__":
 
         # Load displacements
         with open(args.random_walk_json, "r") as f:
-            trajs = json.load(f)
+            trajs = [ ms.RandomWalk.from_dict(d) for d in json.load(f) ]
+            print(f"Loaded {len(trajs)} trajs from {args.random_walk_json}")
 
         res = ms.measure_lin_trajs(trajs, tol=args.tol)
         print(f"Ave fraction of linear points = {res.frac_of_pts_in_lin_segments_mean:.2f} +- {res.frac_of_pts_in_lin_segments_std:.2f} found by random walk simulation with slope difference tol={args.tol}")
@@ -150,7 +139,7 @@ if __name__ == "__main__":
         # Histogram
         fig = go.Figure()
         ph = PlotterHist(fig)
-        ph.add_lin_segments_hist(res.lin_seg_durations_idxs)
+        ph.add_hist(res.lin_seg_durations_idxs)
         if args.show:
             fig.show()
 
@@ -164,7 +153,7 @@ if __name__ == "__main__":
 
         fig = go.Figure()
         ph = PlotterHist(fig)
-        ph.add_lin_segments_hist(lin_segments_duration_idxs)
+        ph.add_hist(lin_segments_duration_idxs)
         fig.update_layout(
             title=f"Linear segments duration<br>(slope difference tol={args.tol})",
             )

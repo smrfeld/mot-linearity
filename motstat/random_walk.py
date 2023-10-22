@@ -11,7 +11,14 @@ class RandomWalk(DataClassDictMixin):
     traj: List[List[int]]
 
 
-def sample_random_walk(no_trajs: int, no_pts_per_traj: int, displacement_to_prob: Dict[int,float]) -> List[RandomWalk]:
+@dataclass
+class DispProb(DataClassDictMixin):
+    disp_x: int
+    disp_y: int
+    prob: float
+
+
+def sample_random_walk(no_trajs: int, no_pts_per_traj: int, disps_probs: List[DispProb]) -> List[RandomWalk]:
     trajs = []
     for _ in range(0,no_trajs):
 
@@ -19,8 +26,8 @@ def sample_random_walk(no_trajs: int, no_pts_per_traj: int, displacement_to_prob
         trajs.append(RandomWalk(traj=pts))
         for j in range(0,no_pts_per_traj):
             # Sample displacement
-            disp_x = np.random.choice(list(displacement_to_prob.keys()), p=list(displacement_to_prob.values()))
-            disp_y = np.random.choice(list(displacement_to_prob.keys()), p=list(displacement_to_prob.values()))
+            disp_x = np.random.choice([ dp.disp_x for dp in disps_probs ], p=[ dp.prob for dp in disps_probs ])
+            disp_y = np.random.choice([ dp.disp_y for dp in disps_probs ], p=[ dp.prob for dp in disps_probs ])
             
             # Add to points
             pts.append([pts[-1][0]+int(disp_x), pts[-1][1]+int(disp_y)])

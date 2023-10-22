@@ -119,9 +119,9 @@ class PlotterHist:
         )
 
 
-    def add_lin_segments_hist(self, lin_segments_duration_idxs: List[float]):
-        trace = go.Histogram(x=lin_segments_duration_idxs, xbins=dict(size=1), histnorm='percent')
-        self.fig.add_trace(trace)
+    def add_hist(self, data: List[float], row: Optional[int] = None, col: Optional[int] = None):
+        trace = go.Histogram(x=data, xbins=dict(size=1), histnorm='percent')
+        self.fig.add_trace(trace, row=row, col=col)
 
 
 class PlotterFrac:
