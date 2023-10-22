@@ -161,9 +161,12 @@ if __name__ == "__main__":
         plot_tracks(track_ids=args.track_ids, src_str=args.file, tol=args.tol, figures_dir=args.figures_dir, show=args.show)
 
     elif args.command == "random-walk-sim":
+
+        # Measure displacements of bounding boxes
         disps = ms.measure_bbox_coord_displacements(mot_file_to_tracks)
         assert len(disps.xy_disps) > 0, "No displacements found"
 
+        # Plot distribution
         fig = make_subplots(rows=1, cols=2)
         ph = PlotterHist(fig)
         ph.add_hist([ xy[0] for xy in disps.xy_disps ], row=1, col=1)
@@ -199,6 +202,8 @@ if __name__ == "__main__":
         linear_analysis({ "random_walk": tracks }, tol=args.tol, show=args.show, figures_dir=args.figures_dir, figures_tag="Random Walk")
 
     elif args.command == "lin-analysis":
+
+        # Linear segments duration analysis
         linear_analysis(mot_file_to_tracks, tol=args.tol, show=args.show, figures_dir=args.figures_dir, figures_tag=args.mot)
 
     else:
